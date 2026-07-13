@@ -75,3 +75,6 @@ export const MEDIA_EXTENSIONS = [
   "mka",
   "gif",
 ];
+
+/** Imagens aceitas no editor (viram clipes de duração livre). */
+export const IMAGE_EXTENSIONS = ["png", "jpg", "jpeg", "webp", "bmp"];

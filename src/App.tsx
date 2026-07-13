@@ -1,12 +1,14 @@
 import { useEffect, useState } from "react";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
 import BatchModal from "./components/BatchModal";
+import EditorView from "./components/editor/EditorView";
 import HomeView from "./components/HomeView";
 import TaskModal from "./components/TaskModal";
 import Toasts from "./components/Toasts";
 import TopBar from "./components/TopBar";
 import { inTauri } from "./lib/backend";
-import { MEDIA_EXTENSIONS } from "./lib/types";
+import { IMAGE_EXTENSIONS, MEDIA_EXTENSIONS } from "./lib/types";
+import { useEditor } from "./state/editor";
 import { useStore } from "./state/store";
 import { useUi } from "./state/ui";
 
@@ -15,6 +17,7 @@ type Theme = "light" | "dark";
 export default function App() {
   const init = useStore((s) => s.init);
   const addPaths = useStore((s) => s.addPaths);
+  const view = useUi((s) => s.view);
   const toast = useUi((s) => s.toast);
   const [dragging, setDragging] = useState(false);
   const [theme, setTheme] = useState<Theme>(() => {
@@ -44,15 +47,21 @@ export default function App() {
         else if (event.payload.type === "drop") {
           setDragging(false);
           const paths = event.payload.paths ?? [];
+          // No editor, imagens também valem (viram clipes de camada).
+          const inEditor = useUi.getState().view === "editor";
+          const accepted = inEditor
+            ? [...MEDIA_EXTENSIONS, ...IMAGE_EXTENSIONS]
+            : MEDIA_EXTENSIONS;
           const media = paths.filter((p) => {
             const ext = p.split(".").pop()?.toLowerCase() ?? "";
-            return MEDIA_EXTENSIONS.includes(ext);
+            return accepted.includes(ext);
           });
           if (media.length === 0 && paths.length > 0) {
             toast("error", "Nenhum arquivo de mídia reconhecido nos itens soltos.");
             return;
           }
-          void addPaths(media);
+          if (inEditor) void useEditor.getState().addMediaPaths(media);
+          else void addPaths(media);
         }
       })
       .then((fn) => {
@@ -66,8 +75,8 @@ export default function App() {
   return (
     <div className="app">
       <TopBar theme={theme} onToggleTheme={() => setTheme(theme === "dark" ? "light" : "dark")} />
-      <main className="main">
-        <HomeView />
+      <main className={`main ${view === "editor" ? "main-editor" : ""}`}>
+        {view === "editor" ? <EditorView /> : <HomeView />}
       </main>
       {dragging && (
         <div className="drop-overlay">

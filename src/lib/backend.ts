@@ -1,9 +1,14 @@
 // Wrappers dos comandos Rust (Tauri v2: chaves camelCase no invoke).
 
-import { invoke } from "@tauri-apps/api/core";
+import { convertFileSrc, invoke } from "@tauri-apps/api/core";
 
 export function inTauri(): boolean {
   return typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
+}
+
+/** convertFileSrc que não explode fora do Tauri (dev no navegador). */
+export function fileSrc(path: string): string {
+  return inTauri() ? convertFileSrc(path) : "";
 }
 
 function cmd<T>(name: string, args: Record<string, unknown> = {}): Promise<T> {

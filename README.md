@@ -1,8 +1,9 @@
 # LocalMedia
 
-**Conversor e cortador de vídeo/áudio 100% offline.** Tudo que você resolveria num "site de
-conversão" — converter, comprimir, cortar, extrair áudio, fazer GIF — rodando na sua máquina
-com ffmpeg embutido. Nenhum arquivo sai do seu computador.
+**Conversor, cortador e editor de vídeo/áudio 100% offline.** Tudo que você resolveria num
+"site de conversão" — converter, comprimir, cortar, extrair áudio, fazer GIF — mais um
+**editor de timeline multi-faixa**, rodando na sua máquina com ffmpeg embutido. Nenhum
+arquivo sai do seu computador.
 
 Parte da suíte **Local/Taylor** de aplicativos offline-first. Instale pelo
 [TaylorHub](https://github.com/Anon5T4R/TaylorHub) ou baixe o instalador na
@@ -24,6 +25,22 @@ Parte da suíte **Local/Taylor** de aplicativos offline-first. Instale pelo
 - **Lote**: o mesmo preset aplicado em N arquivos de uma vez.
 - **Fila com progresso real** (ffmpeg `-progress` estruturado), velocidade e cancelamento.
 - Arraste arquivos pra janela; tema claro/escuro; interface em português.
+
+## Editor (timeline multi-faixa)
+
+A aba **Editor** monta um projeto com vídeos, imagens e áudios juntos:
+
+- **Trilhas de vídeo em camadas** (V1 embaixo, V2+ por cima): marca-d'água,
+  picture-in-picture e sobreposições, com posição e tamanho livres.
+- **Faixas extras de áudio** (A1–A4): música de fundo, narração etc., cada clipe com o
+  próprio volume e mudo.
+- **Vídeo com som entra como par vinculado** (🔗 V+A): dá pra **desvincular** e cortar,
+  dividir ou apagar um trecho **só do áudio ou só do vídeo**.
+- **Imagens** (PNG/JPEG/WebP/BMP) viram clipes de duração livre.
+- Timeline com arrastar, aparar pelas bordas, dividir no cursor (S), snap, zoom
+  (Ctrl+roda), desfazer/refazer e preview com play/scrub.
+- **Exportar** gera um MP4 (H.264/AAC) pela fila normal, com progresso e cancelamento —
+  a composição inteira vira um único `filter_complex` do ffmpeg.
 
 ## Como usar
 

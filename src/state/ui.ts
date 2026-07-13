@@ -8,6 +8,8 @@ export interface Toast {
 
 interface UiState {
   toasts: Toast[];
+  /** Tela atual: conversor (home) ou editor de timeline. */
+  view: "home" | "editor";
   /** Arquivo com o modal de tarefas aberto (id) e aba inicial. */
   taskFileId: string;
   taskTab: string;
@@ -15,6 +17,7 @@ interface UiState {
 
   toast(kind: Toast["kind"], text: string): void;
   dismissToast(id: number): void;
+  setView(view: "home" | "editor"): void;
   openTask(fileId: string, tab?: string): void;
   closeTask(): void;
   setBatchOpen(open: boolean): void;
@@ -24,6 +27,7 @@ let nextToast = 1;
 
 export const useUi = create<UiState>((set) => ({
   toasts: [],
+  view: "home",
   taskFileId: "",
   taskTab: "converter",
   batchOpen: false,
@@ -37,6 +41,9 @@ export const useUi = create<UiState>((set) => ({
   },
   dismissToast(id) {
     set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) }));
+  },
+  setView(view) {
+    set({ view });
   },
   openTask(fileId, tab = "converter") {
     set({ taskFileId: fileId, taskTab: tab });

@@ -2,6 +2,7 @@ import { open, save } from "@tauri-apps/plugin-dialog";
 import * as be from "../lib/backend";
 import { buildConcat, concatCompatible } from "../lib/presets";
 import { MEDIA_EXTENSIONS } from "../lib/types";
+import { useEditor } from "../state/editor";
 import { useStore } from "../state/store";
 import { useUi } from "../state/ui";
 import FileCard from "./FileCard";
@@ -15,6 +16,7 @@ export default function HomeView() {
   const runtimeOk = useStore((s) => s.runtimeOk);
   const toast = useUi((s) => s.toast);
   const setBatchOpen = useUi((s) => s.setBatchOpen);
+  const setView = useUi((s) => s.setView);
 
   const selected = files.filter((f) => f.selected);
 
@@ -100,6 +102,16 @@ export default function HomeView() {
               )}
               <button className="btn small" onClick={() => setBatchOpen(true)}>
                 Converter em lote…
+              </button>
+              <button
+                className="btn small"
+                onClick={() => {
+                  void useEditor.getState().addMediaPaths(selected.map((f) => f.info.path));
+                  clearSelection();
+                  setView("editor");
+                }}
+              >
+                Abrir no editor
               </button>
               <button className="btn ghost small" onClick={clearSelection}>
                 Limpar seleção
