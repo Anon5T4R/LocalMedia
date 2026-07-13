@@ -1,0 +1,38 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#fb923c"/>
+      <stop offset="1" stop-color="#dc2626"/>
+    </linearGradient>
+    <linearGradient id="sheen" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.18"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+
+  <!-- fundo -->
+  <rect x="64" y="64" width="896" height="896" rx="200" fill="url(#bg)"/>
+  <rect x="64" y="64" width="896" height="512" rx="200" fill="url(#sheen)"/>
+
+  <!-- claquete/tela -->
+  <rect x="212" y="300" width="600" height="420" rx="48" fill="#ffffff" opacity="0.95"/>
+  <!-- play -->
+  <path d="M 448 420 L 448 600 L 608 510 Z" fill="#dc2626"/>
+  <!-- timeline com trecho selecionado (corte) -->
+  <rect x="260" y="760" width="504" height="36" rx="18" fill="#ffffff" opacity="0.45"/>
+  <rect x="400" y="752" width="200" height="52" rx="20" fill="#ffffff" opacity="0.95"/>
+
+  <!-- setas de conversão -->
+  <g stroke="#ffffff" stroke-width="34" stroke-linecap="round" fill="none" opacity="0.9">
+    <path d="M 180 480 A 340 340 0 0 1 300 250"/>
+    <path d="M 844 540 A 340 340 0 0 1 726 772"/>
+  </g>
+  <g fill="#ffffff" opacity="0.9">
+    <path d="M 320 218 L 246 268 L 330 300 Z"/>
+    <path d="M 704 804 L 780 756 L 696 722 Z"/>
+  </g>
+
+  <!-- easter egg da marca -->
+  <text x="800" y="900" font-family="Segoe Script, cursive" font-size="88"
+        fill="#ffffff" opacity="0.55" text-anchor="middle">Taylor</text>
+</svg>
