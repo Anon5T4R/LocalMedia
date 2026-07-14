@@ -78,3 +78,6 @@ export const MEDIA_EXTENSIONS = [
 
 /** Imagens aceitas no editor (viram clipes de duração livre). */
 export const IMAGE_EXTENSIONS = ["png", "jpg", "jpeg", "webp", "bmp"];
+
+/** Arquivos de legenda aceitos (queimar/anexar). */
+export const SUBTITLE_EXTENSIONS = ["srt", "vtt", "ass", "ssa"];

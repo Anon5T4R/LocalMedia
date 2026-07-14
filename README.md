@@ -20,6 +20,9 @@ Parte da suíte **Local/Taylor** de aplicativos offline-first. Instale pelo
   Regra de ouro: sem troca de codec o corte usa `-c copy` — **instantâneo e sem perda**.
 - **Juntar clipes** do mesmo formato (concat demuxer, sem recodificar).
 - **GIF de trecho** em 2 passes (palettegen/paletteuse — cores muito melhores).
+- **Legendas**: **queimar** um .srt/.vtt/.ass no vídeo (ou uma legenda já embutida, com
+  tamanho de letra à escolha) pra postar onde faixa de legenda não aparece — ou **anexar
+  como faixa** sem recodificar. Combina com o .srt que o LocalScribe gera.
 - **Faixas**: remover/escolher áudios e legendas de um MKV/MP4 sem recodificar.
 - **Ajustes**: redimensionar, rotacionar e **normalizar volume** (loudnorm EBU R128).
 - **Lote**: o mesmo preset aplicado em N arquivos de uma vez.

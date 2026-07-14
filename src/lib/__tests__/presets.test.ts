@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
+  buildBurnSubs,
   buildConcat,
   buildConvert,
   buildCut,
   buildGif,
+  buildMuxSubs,
   buildTracks,
   concatCompatible,
   estimateCompress,
@@ -48,6 +50,44 @@ describe("buildConvert", () => {
     expect(args).toContain("-vn");
     expect(args[args.indexOf("-ar") + 1]).toBe("16000");
     expect(args[args.indexOf("-ac") + 1]).toBe("1");
+  });
+});
+
+describe("legendas", () => {
+  it("queimar de arquivo externo escapa o caminho do Windows no filtro", () => {
+    const b = buildBurnSubs(video, { kind: "file", path: "C:\\legendas\\filme pt.srt" }, 0);
+    const args = b.steps[0];
+    const vf = args[args.indexOf("-vf") + 1];
+    // Dois níveis de escape: "C:" vira "C\\:" e as barras viram "/".
+    expect(vf).toBe("subtitles=C\\\\:/legendas/filme pt.srt");
+    expect(args).toContain("libx264"); // hardsub recodifica o vídeo…
+    const ca = args[args.indexOf("-c:a") + 1];
+    expect(ca).toBe("copy"); // …mas copia o áudio
+    expect(b.ext).toBe("mkv"); // origem mkv fica mkv
+  });
+
+  it("queimar legenda embutida usa o próprio vídeo com si=N e força tamanho", () => {
+    const b = buildBurnSubs(video, { kind: "embedded", index: 0 }, 24);
+    const vf = b.steps[0][b.steps[0].indexOf("-vf") + 1];
+    expect(vf).toContain(":si=0");
+    expect(vf).toContain(":force_style=Fontsize=24");
+    expect(vf).toContain("subtitles=C\\\\:/v/filme.mkv");
+  });
+
+  it("anexar como faixa não recodifica; mp4 vira mov_text, mkv copia", () => {
+    const mkv = buildMuxSubs(video, "C:/l/pt.srt");
+    expect(mkv.steps[0]).toContain("copy");
+    expect(mkv.steps[0]).not.toContain("libx264");
+    expect(mkv.steps[0][mkv.steps[0].indexOf("-c:s") + 1]).toBe("copy");
+    expect(mkv.ext).toBe("mkv");
+
+    const mp4 = buildMuxSubs({ ...video, container: "mp4" }, "C:/l/pt.srt");
+    expect(mp4.steps[0][mp4.steps[0].indexOf("-c:s") + 1]).toBe("mov_text");
+    expect(mp4.ext).toBe("mp4");
+
+    // Container sem suporte a legenda cai pra MKV.
+    const avi = buildMuxSubs({ ...video, container: "avi" }, "C:/l/pt.srt");
+    expect(avi.ext).toBe("mkv");
   });
 });
 

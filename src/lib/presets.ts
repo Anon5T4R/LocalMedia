@@ -3,6 +3,7 @@
  *  aqui entra só o que muda por operação. Regra de ouro do plano: corte sem
  *  troca de codec usa `-c copy` (instantâneo, sem re-encode). */
 
+import { escDrawtext } from "./editor/render";
 import type { MediaInfo } from "./types";
 
 export interface BuiltJob {
@@ -332,6 +333,65 @@ export function buildLoudnorm(info: MediaInfo): BuiltJob {
     suffix: "volume",
     denomMs: info.durationMs,
     steps: [args],
+  };
+}
+
+// ---------- legendas (queimar / anexar) ----------
+
+/** De onde vem a legenda: arquivo externo (.srt/.vtt/.ass) ou uma faixa já
+ *  embutida no próprio vídeo (índice entre as legendas). */
+export type SubSource = { kind: "file"; path: string } | { kind: "embedded"; index: number };
+
+/** Queima a legenda nos quadros (hardsub) — pra postar onde legenda em faixa
+ *  não aparece (WhatsApp, Instagram…). Recodifica o vídeo; áudio é copiado.
+ *  fontSize 0 = tamanho padrão do libass. */
+export function buildBurnSubs(info: MediaInfo, source: SubSource, fontSize: number): BuiltJob {
+  const subPath = source.kind === "file" ? source.path : info.path;
+  // Mesmo escaping de dois níveis do drawtext (caminho vira valor de filtro).
+  let vf = `subtitles=${escDrawtext(subPath.replace(/\\/g, "/"))}`;
+  if (source.kind === "embedded") vf += `:si=${source.index}`;
+  if (fontSize > 0) vf += `:force_style=Fontsize=${fontSize}`;
+  const container = info.container === "mkv" ? "mkv" : "mp4";
+  return {
+    label: "Queimar legenda",
+    ext: container,
+    suffix: "legendado",
+    denomMs: info.durationMs,
+    steps: [
+      [
+        "-i", info.path,
+        "-map", "0:v:0", "-map", "0:a?",
+        "-vf", vf,
+        "-c:v", "libx264", "-crf", "20", "-preset", "veryfast",
+        "-pix_fmt", "yuv420p",
+        "-c:a", "copy",
+        ...(container === "mp4" ? ["-movflags", "+faststart"] : []),
+      ],
+    ],
+  };
+}
+
+/** Anexa um arquivo de legenda como FAIXA, sem recodificar (instantâneo).
+ *  MP4 só carrega mov_text; MKV copia srt/ass como estão. Containers que não
+ *  aceitam legenda (avi/webm…) saem como MKV. */
+export function buildMuxSubs(info: MediaInfo, subPath: string): BuiltJob {
+  const mp4 = ["mp4", "m4v", "mov"].includes(info.container);
+  const container = mp4 ? "mp4" : "mkv";
+  return {
+    label: "Anexar legenda",
+    ext: container,
+    suffix: "legendado",
+    denomMs: info.durationMs,
+    steps: [
+      [
+        "-i", info.path,
+        "-i", subPath,
+        "-map", "0", "-map", "1:0",
+        "-c", "copy",
+        "-c:s", mp4 ? "mov_text" : "copy",
+        ...(mp4 ? ["-movflags", "+faststart"] : []),
+      ],
+    ],
   };
 }
 

@@ -61,3 +61,8 @@ export const useUi = create<UiState>((set) => ({
     set({ helpOpen: open });
   },
 }));
+
+// Só em dev: expõe o store pra testes manuais no console.
+if (import.meta.env.DEV) {
+  (window as unknown as Record<string, unknown>).__ui = useUi;
+}

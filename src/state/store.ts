@@ -177,6 +177,11 @@ export const useStore = create<Store>((set, get) => ({
   },
 }));
 
+// Só em dev: expõe o store pra testes manuais no console.
+if (import.meta.env.DEV) {
+  (window as unknown as Record<string, unknown>).__store = useStore;
+}
+
 type Set = (fn: (s: Store) => Partial<Store>) => void;
 
 function patchJob(set: Set, id: string, patch: Partial<Job>) {

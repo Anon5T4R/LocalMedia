@@ -3,14 +3,16 @@
 // comum pede o destino num diálogo de salvar e enfileira.
 
 import { useState } from "react";
-import { save } from "@tauri-apps/plugin-dialog";
+import { open, save } from "@tauri-apps/plugin-dialog";
 import * as be from "../lib/backend";
 import {
+  buildBurnSubs,
   buildCompress,
   buildConvert,
   buildCut,
   buildGif,
   buildLoudnorm,
+  buildMuxSubs,
   buildResize,
   buildRotate,
   buildTracks,
@@ -21,7 +23,7 @@ import {
   type Rotation,
 } from "../lib/presets";
 import { fmtBytes } from "../lib/time";
-import type { MediaFile } from "../lib/types";
+import { SUBTITLE_EXTENSIONS, type MediaFile } from "../lib/types";
 import { suggestOut, useStore } from "../state/store";
 import { useUi } from "../state/ui";
 
@@ -30,6 +32,7 @@ const TABS: [string, string][] = [
   ["comprimir", "Comprimir"],
   ["cortar", "Cortar"],
   ["gif", "GIF"],
+  ["legendas", "Legendas"],
   ["faixas", "Faixas"],
   ["ajustes", "Ajustes"],
 ];
@@ -48,7 +51,7 @@ export default function TaskModal() {
   if (!file) return null;
 
   const tabs = TABS.filter(([id]) => {
-    if (!file.info.video && (id === "comprimir" || id === "gif")) return false;
+    if (!file.info.video && (id === "comprimir" || id === "gif" || id === "legendas")) return false;
     if (id === "faixas" && file.info.audio.length + file.info.subs.length < 2) return false;
     return true;
   });
@@ -90,6 +93,7 @@ export default function TaskModal() {
         {tab === "comprimir" && <CompressTab file={file} onSubmit={submit} />}
         {tab === "cortar" && <CutTab file={file} onSubmit={submit} />}
         {tab === "gif" && <GifTab file={file} onSubmit={submit} />}
+        {tab === "legendas" && <SubsTab file={file} onSubmit={submit} />}
         {tab === "faixas" && <TracksTab file={file} onSubmit={submit} />}
         {tab === "ajustes" && <AdjustTab file={file} onSubmit={submit} />}
       </div>
@@ -247,6 +251,129 @@ function GifTab({ file, onSubmit }: TabProps) {
       <div className="tab-foot">
         <button className="btn primary" onClick={() => void submit()}>
           Gerar GIF…
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function SubsTab({ file, onSubmit }: TabProps) {
+  const hasEmbedded = file.info.subs.length > 0;
+  const [subPath, setSubPath] = useState("");
+  const [source, setSource] = useState<"file" | "embedded">("file");
+  const [embIndex, setEmbIndex] = useState(0);
+  const [fontSize, setFontSize] = useState(0);
+  const toast = useUi((s) => s.toast);
+
+  const subName = subPath.split(/[\\/]/).pop() ?? "";
+
+  async function pickSub() {
+    const picked = await open({
+      multiple: false,
+      title: "Escolher arquivo de legenda",
+      filters: [{ name: "Legendas", extensions: SUBTITLE_EXTENSIONS }],
+    }).catch(() => null);
+    if (picked && !Array.isArray(picked)) {
+      setSubPath(picked);
+      setSource("file");
+    }
+  }
+
+  function burn() {
+    if (source === "file" && !subPath) {
+      toast("error", "Escolha um arquivo de legenda primeiro.");
+      return;
+    }
+    const src =
+      source === "embedded"
+        ? ({ kind: "embedded", index: embIndex } as const)
+        : ({ kind: "file", path: subPath } as const);
+    void onSubmit(buildBurnSubs(file.info, src, fontSize));
+  }
+
+  return (
+    <div className="tab-body">
+      <p className="card-hint">
+        <b>Queimar</b> grava a legenda nos quadros — aparece em qualquer lugar (WhatsApp,
+        Instagram…), mas recodifica o vídeo. <b>Anexar como faixa</b> é instantâneo e dá pra
+        ligar/desligar no player, só que nem todo app mostra. Dica: o LocalScribe gera o
+        .srt da transcrição.
+      </p>
+
+      <div className="track-group">
+        <div className="track-title">Origem da legenda</div>
+        <label className="check-row">
+          <input
+            type="radio"
+            name="subsrc"
+            checked={source === "file"}
+            onChange={() => setSource("file")}
+          />
+          <span>
+            Arquivo (.srt, .vtt, .ass){" "}
+            <button className="btn small" onClick={() => void pickSub()}>
+              {subPath ? subName : "Escolher…"}
+            </button>
+          </span>
+        </label>
+        {hasEmbedded && (
+          <label className="check-row">
+            <input
+              type="radio"
+              name="subsrc"
+              checked={source === "embedded"}
+              onChange={() => setSource("embedded")}
+            />
+            <span>
+              Embutida no vídeo{" "}
+              <select
+                value={embIndex}
+                onChange={(e) => {
+                  setEmbIndex(Number(e.target.value));
+                  setSource("embedded");
+                }}
+              >
+                {file.info.subs.map((s) => (
+                  <option key={s.index} value={s.index}>
+                    Legenda {s.index + 1} {s.lang && `(${s.lang})`} {s.title}
+                  </option>
+                ))}
+              </select>
+            </span>
+          </label>
+        )}
+      </div>
+
+      <div className="adjust-row">
+        <div>
+          <b>Queimar no vídeo</b>
+          <div className="card-hint">tamanho da letra abaixo; recodifica (H.264)</div>
+        </div>
+        <select value={fontSize} onChange={(e) => setFontSize(Number(e.target.value))}>
+          <option value={0}>Tamanho padrão</option>
+          <option value={18}>Pequena</option>
+          <option value={24}>Média</option>
+          <option value={32}>Grande</option>
+        </select>
+        <button className="btn primary" onClick={burn}>
+          Queimar…
+        </button>
+      </div>
+
+      <div className="adjust-row">
+        <div>
+          <b>Anexar como faixa</b>
+          <div className="card-hint">
+            sem recodificar — só pra arquivo externo (a embutida já é uma faixa)
+          </div>
+        </div>
+        <span />
+        <button
+          className="btn"
+          disabled={!subPath}
+          onClick={() => void onSubmit(buildMuxSubs(file.info, subPath))}
+        >
+          Anexar…
         </button>
       </div>
     </div>
