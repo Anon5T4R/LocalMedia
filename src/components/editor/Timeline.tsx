@@ -72,7 +72,8 @@ export default function Timeline() {
   for (let t = vTracks.length - 1; t >= 0; t--) rows.push({ kind: "video", track: t });
   for (let t = 0; t < aTracks.length; t++) rows.push({ kind: "audio", track: t });
 
-  // Zoom com Ctrl+roda (listener nativo: o onWheel do React é passivo).
+  // Zoom com Ctrl+roda, ancorado no mouse (o instante sob o ponteiro fica
+  // parado, como nos NLEs). Listener nativo: o onWheel do React é passivo.
   useEffect(() => {
     const el = wrapRef.current;
     if (!el) return;
@@ -80,11 +81,29 @@ export default function Timeline() {
       if (!e.ctrlKey) return;
       e.preventDefault();
       const s = useEditor.getState();
+      const offsetX = e.clientX - el.getBoundingClientRect().left;
+      const msAtMouse = (el.scrollLeft + offsetX) / (s.pxPerSec / 1000);
       s.setZoom(s.pxPerSec * (e.deltaY < 0 ? 1.25 : 0.8));
+      requestAnimationFrame(() => {
+        const pms = useEditor.getState().pxPerSec / 1000;
+        el.scrollLeft = Math.max(0, msAtMouse * pms - offsetX);
+      });
     };
     el.addEventListener("wheel", onWheel, { passive: false });
     return () => el.removeEventListener("wheel", onWheel);
   }, []);
+
+  // Durante o play, a timeline acompanha o cursor (auto-scroll).
+  const playing = useEditor((s) => s.playing);
+  useEffect(() => {
+    if (!playing) return;
+    const el = wrapRef.current;
+    if (!el) return;
+    const px = playheadMs * pxPerMs;
+    if (px < el.scrollLeft + 40 || px > el.scrollLeft + el.clientWidth - 80) {
+      el.scrollLeft = Math.max(0, px - 120);
+    }
+  }, [playheadMs, playing, pxPerMs]);
 
   // Hit-test pro drop de arquivos: descobre trilha e tempo pela posição.
   useEffect(() => {
@@ -196,6 +215,12 @@ export default function Timeline() {
     );
   }
 
+  // Par vinculado do clipe selecionado ganha um destaque discreto.
+  const sel = clips.find((c) => c.id === selectedId);
+  const partnerId = sel?.linkId
+    ? clips.find((c) => c.id !== sel.id && c.linkId === sel.linkId)?.id
+    : undefined;
+
   return (
     <div className="tl2">
       <div className="tl2-heads-clip">
@@ -272,7 +297,7 @@ export default function Timeline() {
                 {rowClips(kind, track).map((c) => (
                   <div
                     key={c.id}
-                    className={`tl-clip clip-${c.kind} ${selectedId === c.id ? "selected" : ""} ${c.muted ? "muted" : ""} ${c.kind === "video" && thumbs[c.src.path] ? "has-thumb" : ""}`}
+                    className={`tl-clip clip-${c.kind} ${selectedId === c.id ? "selected" : ""} ${partnerId === c.id ? "linked-sel" : ""} ${c.muted ? "muted" : ""} ${c.kind === "video" && thumbs[c.src.path] ? "has-thumb" : ""}`}
                     style={{
                       left: `${c.startMs * pxPerMs}px`,
                       width: `${Math.max(4, clipDurMs(c) * pxPerMs)}px`,
@@ -290,6 +315,18 @@ export default function Timeline() {
                       {c.speed !== 1 && `${c.speed}× `}
                       {c.kind === "text" ? `𝐓 ${c.text || "Título"}` : c.src.name}
                     </span>
+                    {c.fadeInMs > 0 && (
+                      <span
+                        className="clip-fade in"
+                        style={{ width: `${Math.min(clipDurMs(c), c.fadeInMs) * pxPerMs}px` }}
+                      />
+                    )}
+                    {c.fadeOutMs > 0 && (
+                      <span
+                        className="clip-fade out"
+                        style={{ width: `${Math.min(clipDurMs(c), c.fadeOutMs) * pxPerMs}px` }}
+                      />
+                    )}
                     <span
                       className="tl-handle left"
                       onPointerDown={(e) => onClipPointerDown(e, c, "in")}

@@ -682,6 +682,54 @@ input[type="radio"] {
   font-size: 13px;
 }
 
+/* ---------- ajuda do editor ---------- */
+
+.help-modal {
+  width: min(860px, calc(100vw - 40px));
+}
+.help-cols {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 22px;
+}
+@media (max-width: 760px) {
+  .help-cols {
+    grid-template-columns: 1fr;
+  }
+}
+.help-keys {
+  border-collapse: collapse;
+  margin-top: 8px;
+}
+.help-keys td {
+  padding: 4px 12px 4px 0;
+  font-size: 13px;
+  color: var(--text-dim);
+  vertical-align: top;
+}
+.help-keys kbd {
+  display: inline-block;
+  padding: 1px 7px;
+  border-radius: 6px;
+  background: var(--surface-2);
+  border: 1px solid var(--border-strong);
+  border-bottom-width: 2px;
+  font-family: inherit;
+  font-size: 12px;
+  color: var(--text);
+  white-space: nowrap;
+}
+.help-tips {
+  margin: 8px 0 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text-dim);
+}
+
 /* ---------- overlay / toasts ---------- */
 
 .drop-overlay {
@@ -1103,6 +1151,24 @@ input[type="radio"] {
 .tl-clip.selected {
   outline: 2px solid var(--text);
   z-index: 2;
+}
+.tl-clip.linked-sel {
+  outline: 2px dashed color-mix(in srgb, var(--text) 60%, transparent);
+}
+.clip-fade {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  pointer-events: none;
+  max-width: 100%;
+}
+.clip-fade.in {
+  left: 0;
+  background: linear-gradient(to top right, rgba(0, 0, 0, 0.5) 49.5%, transparent 50%);
+}
+.clip-fade.out {
+  right: 0;
+  background: linear-gradient(to top left, rgba(0, 0, 0, 0.5) 49.5%, transparent 50%);
 }
 .tl-clip.muted {
   opacity: 0.55;

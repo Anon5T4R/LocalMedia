@@ -14,6 +14,7 @@ interface UiState {
   taskFileId: string;
   taskTab: string;
   batchOpen: boolean;
+  helpOpen: boolean;
 
   toast(kind: Toast["kind"], text: string): void;
   dismissToast(id: number): void;
@@ -21,6 +22,7 @@ interface UiState {
   openTask(fileId: string, tab?: string): void;
   closeTask(): void;
   setBatchOpen(open: boolean): void;
+  setHelpOpen(open: boolean): void;
 }
 
 let nextToast = 1;
@@ -31,6 +33,7 @@ export const useUi = create<UiState>((set) => ({
   taskFileId: "",
   taskTab: "converter",
   batchOpen: false,
+  helpOpen: false,
 
   toast(kind, text) {
     const id = nextToast++;
@@ -53,5 +56,8 @@ export const useUi = create<UiState>((set) => ({
   },
   setBatchOpen(open) {
     set({ batchOpen: open });
+  },
+  setHelpOpen(open) {
+    set({ helpOpen: open });
   },
 }));

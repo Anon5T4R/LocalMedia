@@ -55,6 +55,7 @@ usar dos editores profissionais:
   miniaturas nos clipes e preview com play/scrub (setas movem o cursor; Home/End).
 - **Projeto salva e abre** (.json) e um rascunho automático segura a timeline se o app
   fechar.
+- Botão **?** (ou F1) com todos os atalhos e dicas de uso.
 - **Exportar** gera um MP4 (H.264/AAC, qualidade selecionável) pela fila normal, com
   progresso e cancelamento — a composição inteira vira um único `filter_complex` do
   ffmpeg.

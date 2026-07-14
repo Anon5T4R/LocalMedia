@@ -10,7 +10,9 @@ import { projectDurMs } from "../../lib/editor/model";
 import { fmtCut } from "../../lib/time";
 import { IMAGE_EXTENSIONS, MEDIA_EXTENSIONS } from "../../lib/types";
 import { useEditor } from "../../state/editor";
+import { useUi } from "../../state/ui";
 import ClipProps from "./ClipProps";
+import HelpModal from "./HelpModal";
 import PreviewStage from "./PreviewStage";
 import Timeline from "./Timeline";
 
@@ -83,6 +85,12 @@ export default function EditorView() {
         const step = (e.shiftKey ? 1000 : 100) * (e.key === "ArrowLeft" ? -1 : 1);
         s.setPlaying(false);
         s.setPlayhead(s.playheadMs + step);
+      } else if (e.key === "?" || e.key === "F1") {
+        e.preventDefault();
+        useUi.getState().setHelpOpen(!useUi.getState().helpOpen);
+      } else if (e.key === "Escape") {
+        if (useUi.getState().helpOpen) useUi.getState().setHelpOpen(false);
+        else s.select("");
       } else if (e.key === "Home") {
         e.preventDefault();
         s.setPlaying(false);
@@ -179,6 +187,13 @@ export default function EditorView() {
           ⤢
         </button>
         <span className="toolbar-spacer" />
+        <button
+          className="btn small"
+          onClick={() => useUi.getState().setHelpOpen(true)}
+          title="Atalhos e dicas (? ou F1)"
+        >
+          ?
+        </button>
         <button className="btn small" onClick={() => void openProjectFile()} title="Abrir projeto salvo (.json)">
           📂
         </button>
@@ -212,6 +227,7 @@ export default function EditorView() {
       ) : (
         <Timeline />
       )}
+      <HelpModal />
     </div>
   );
 }
