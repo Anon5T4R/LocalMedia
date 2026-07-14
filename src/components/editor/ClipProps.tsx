@@ -1,8 +1,8 @@
 // Painel lateral do editor: propriedades do clipe selecionado (volume, mudo,
-// posição da camada, duração de imagem, vínculo) ou, sem seleção, os ajustes
-// do projeto (resolução/fps).
+// velocidade, fades, camada, rotação, texto, vínculo) ou, sem seleção, os
+// ajustes do projeto (resolução/fps/qualidade da exportação).
 
-import { clipDurMs, clipEndMs } from "../../lib/editor/model";
+import { clipDurMs, clipEndMs, isFreeSource } from "../../lib/editor/model";
 import { fmtCut } from "../../lib/time";
 import { useEditor } from "../../state/editor";
 
@@ -14,18 +14,35 @@ const RESOLUTIONS: [string, number, number][] = [
   ["Quadrado (1080×1080)", 1080, 1080],
 ];
 
+const SPEEDS = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 2, 3, 4];
+
+const QUALITIES: [number, string][] = [
+  [18, "Máxima (arquivo maior)"],
+  [20, "Alta (padrão)"],
+  [26, "Compacta (arquivo menor)"],
+];
+
 export default function ClipProps() {
   const clips = useEditor((s) => s.clips);
   const selectedId = useEditor((s) => s.selectedId);
   const project = useEditor((s) => s.project);
+  const exportCrf = useEditor((s) => s.exportCrf);
   const setProject = useEditor((s) => s.setProject);
+  const setExportCrf = useEditor((s) => s.setExportCrf);
   const setGain = useEditor((s) => s.setGain);
   const toggleMute = useEditor((s) => s.toggleMute);
   const setFit = useEditor((s) => s.setFit);
   const setRect = useEditor((s) => s.setRect);
+  const setSpeed = useEditor((s) => s.setSpeed);
+  const setFade = useEditor((s) => s.setFade);
+  const setOpacity = useEditor((s) => s.setOpacity);
+  const setRotation = useEditor((s) => s.setRotation);
+  const toggleFlipH = useEditor((s) => s.toggleFlipH);
+  const setTextProps = useEditor((s) => s.setTextProps);
   const trim = useEditor((s) => s.trim);
   const unlinkSelected = useEditor((s) => s.unlinkSelected);
   const removeSelected = useEditor((s) => s.removeSelected);
+  const duplicateSelected = useEditor((s) => s.duplicateSelected);
   const beginGesture = useEditor((s) => s.beginGesture);
 
   const clip = clips.find((c) => c.id === selectedId);
@@ -66,28 +83,110 @@ export default function ClipProps() {
             ))}
           </select>
         </label>
+        <label className="prop-row">
+          Qualidade
+          <select value={exportCrf} onChange={(e) => setExportCrf(Number(e.target.value))}>
+            {QUALITIES.map(([crf, label]) => (
+              <option key={crf} value={crf}>
+                {label}
+              </option>
+            ))}
+          </select>
+        </label>
         <p className="card-hint">
-          Clique num clipe pra editar volume, posição da camada e vínculo. Vídeos com som
-          entram como um par vinculado (🔗): desvincule pra recortar só o áudio ou só o
-          vídeo.
+          Clique num clipe pra editar volume, velocidade, fades, posição da camada e vínculo.
+          Vídeos com som entram como um par vinculado (🔗): desvincule pra recortar só o
+          áudio ou só o vídeo. O botão <b>＋ Texto</b> põe títulos por cima do vídeo.
         </p>
       </aside>
     );
   }
 
   const kindLabel =
-    clip.kind === "video" ? "vídeo" : clip.kind === "image" ? "imagem" : "áudio";
+    clip.kind === "video"
+      ? "vídeo"
+      : clip.kind === "image"
+        ? "imagem"
+        : clip.kind === "text"
+          ? "título"
+          : "áudio";
+  const isVisual = clip.kind === "video" || clip.kind === "image";
 
   return (
     <aside className="clip-props">
-      <h3 title={clip.src.path}>{clip.src.name}</h3>
+      <h3 title={clip.src.path || clip.text}>
+        {clip.kind === "text" ? clip.text || "Título" : clip.src.name}
+      </h3>
       <div className="prop-meta">
         <span className="chip">{kindLabel}</span>
         <span className="chip">
           {fmtCut(clip.startMs)} → {fmtCut(clipEndMs(clip))}
         </span>
         <span className="chip">dura {fmtCut(clipDurMs(clip))}</span>
+        {clip.speed !== 1 && <span className="chip">{clip.speed}×</span>}
       </div>
+
+      {clip.kind === "text" && (
+        <>
+          <label className="prop-row">
+            Texto
+            <input
+              type="text"
+              value={clip.text}
+              onChange={(e) => setTextProps(clip.id, { text: e.target.value })}
+            />
+          </label>
+          <label className="prop-row">
+            Tamanho
+            <input
+              type="range"
+              min={0.03}
+              max={0.25}
+              step={0.01}
+              value={clip.textSize}
+              onPointerDown={beginGesture}
+              onChange={(e) => setTextProps(clip.id, { textSize: Number(e.target.value) })}
+            />
+            <b>{Math.round(clip.textSize * 100)}%</b>
+          </label>
+          <label className="prop-row">
+            Cor
+            <input
+              type="color"
+              value={clip.textColor}
+              onChange={(e) => setTextProps(clip.id, { textColor: e.target.value })}
+            />
+            <label className="check-row" style={{ flex: 1 }}>
+              <input
+                type="checkbox"
+                checked={clip.textBox}
+                onChange={() => setTextProps(clip.id, { textBox: !clip.textBox })}
+              />
+              <span>Fundo</span>
+            </label>
+          </label>
+          {(
+            [
+              ["X", "x"],
+              ["Y", "y"],
+            ] as const
+          ).map(([label, key]) => (
+            <label key={key} className="prop-row">
+              {label}
+              <input
+                type="range"
+                min={0}
+                max={1}
+                step={0.01}
+                value={clip[key]}
+                onPointerDown={beginGesture}
+                onChange={(e) => setRect(clip.id, { [key]: Number(e.target.value) })}
+              />
+              <b>{Math.round(clip[key] * 100)}%</b>
+            </label>
+          ))}
+        </>
+      )}
 
       {clip.kind === "audio" && (
         <>
@@ -118,7 +217,7 @@ export default function ClipProps() {
         </>
       )}
 
-      {clip.kind !== "audio" && (
+      {isVisual && (
         <>
           <label className="prop-row">
             Enquadr.
@@ -158,10 +257,103 @@ export default function ClipProps() {
               ))}
             </>
           )}
+          <label className="prop-row">
+            Rotação
+            <select
+              value={clip.rotation}
+              onChange={(e) => {
+                beginGesture();
+                setRotation(clip.id, Number(e.target.value) as 0 | 90 | 180 | 270);
+              }}
+            >
+              <option value={0}>Sem rotação</option>
+              <option value={90}>90° horário</option>
+              <option value={180}>180°</option>
+              <option value={270}>90° anti-horário</option>
+            </select>
+          </label>
+          <label className="check-row">
+            <input
+              type="checkbox"
+              checked={clip.flipH}
+              onChange={() => {
+                beginGesture();
+                toggleFlipH(clip.id);
+              }}
+            />
+            <span>Espelhar na horizontal</span>
+          </label>
         </>
       )}
 
-      {clip.kind === "image" && (
+      {(isVisual || clip.kind === "text") && (
+        <label className="prop-row">
+          Opacidade
+          <input
+            type="range"
+            min={0.1}
+            max={1}
+            step={0.05}
+            value={clip.opacity}
+            onPointerDown={beginGesture}
+            onChange={(e) => setOpacity(clip.id, Number(e.target.value))}
+          />
+          <b>{Math.round(clip.opacity * 100)}%</b>
+        </label>
+      )}
+
+      {(clip.kind === "video" || clip.kind === "audio") && (
+        <label className="prop-row">
+          Velocidade
+          <select
+            value={clip.speed}
+            onChange={(e) => {
+              beginGesture();
+              setSpeed(clip.id, Number(e.target.value));
+            }}
+          >
+            {SPEEDS.map((v) => (
+              <option key={v} value={v}>
+                {v}×
+              </option>
+            ))}
+            {!SPEEDS.includes(clip.speed) && <option value={clip.speed}>{clip.speed}×</option>}
+          </select>
+        </label>
+      )}
+
+      {clip.kind !== "text" && (
+        <>
+          <label className="prop-row">
+            Fade in
+            <input
+              type="range"
+              min={0}
+              max={3000}
+              step={100}
+              value={clip.fadeInMs}
+              onPointerDown={beginGesture}
+              onChange={(e) => setFade(clip.id, { fadeInMs: Number(e.target.value) })}
+            />
+            <b>{(clip.fadeInMs / 1000).toFixed(1)}s</b>
+          </label>
+          <label className="prop-row">
+            Fade out
+            <input
+              type="range"
+              min={0}
+              max={3000}
+              step={100}
+              value={clip.fadeOutMs}
+              onPointerDown={beginGesture}
+              onChange={(e) => setFade(clip.id, { fadeOutMs: Number(e.target.value) })}
+            />
+            <b>{(clip.fadeOutMs / 1000).toFixed(1)}s</b>
+          </label>
+        </>
+      )}
+
+      {isFreeSource(clip.kind) && (
         <label className="prop-row">
           Duração (s)
           <input
@@ -181,10 +373,17 @@ export default function ClipProps() {
 
       <div className="prop-actions">
         {clip.linkId && (
-          <button className="btn small" onClick={unlinkSelected} title="Separar áudio e vídeo pra editar cada um sozinho">
+          <button
+            className="btn small"
+            onClick={unlinkSelected}
+            title="Separar áudio e vídeo pra editar cada um sozinho"
+          >
             🔗 Desvincular
           </button>
         )}
+        <button className="btn small" onClick={duplicateSelected} title="Ctrl+D">
+          ⧉ Duplicar
+        </button>
         <button className="btn small" onClick={removeSelected}>
           🗑 Remover
         </button>

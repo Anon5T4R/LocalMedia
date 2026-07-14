@@ -64,11 +64,13 @@ export default function PreviewStage() {
   useEffect(() => {
     const t = playheadMs;
     for (const c of [...activeVideo, ...activeAudio]) {
-      if (c.kind === "image") continue;
+      if (c.kind === "image" || c.kind === "text") continue;
       const el = refs.current.get(c.id);
       if (!el) continue;
-      const want = (c.inMs + (t - c.startMs)) / 1000;
+      // Clipe acelerado consome a fonte speed× mais rápido que a timeline.
+      const want = (c.inMs + (t - c.startMs) * c.speed) / 1000;
       if (c.kind === "audio") el.volume = Math.min(1, c.gain);
+      el.playbackRate = c.speed;
       if (playing) {
         if (el.paused) void el.play().catch(() => {});
         if (Math.abs(el.currentTime - want) > 0.25) el.currentTime = want;
@@ -88,10 +90,29 @@ export default function PreviewStage() {
   }, [playing]);
 
   function layerStyle(c: Clip): React.CSSProperties {
+    const fx: React.CSSProperties = {};
+    if (c.opacity < 1) fx.opacity = c.opacity;
+    const t: string[] = [];
+    if (c.rotation !== 0) t.push(`rotate(${c.rotation}deg)`);
+    if (c.flipH) t.push("scaleX(-1)");
+    if (t.length > 0) fx.transform = t.join(" ");
     if (c.fit === "cheia") {
-      return { inset: 0, width: "100%", height: "100%", objectFit: "contain" };
+      return { inset: 0, width: "100%", height: "100%", objectFit: "contain", ...fx };
     }
-    return { left: `${c.x * 100}%`, top: `${c.y * 100}%`, width: `${c.w * 100}%` };
+    return { left: `${c.x * 100}%`, top: `${c.y * 100}%`, width: `${c.w * 100}%`, ...fx };
+  }
+
+  // Aproximação do drawtext: fonte = fração da altura do palco (que em CSS é
+  // min(36vh, 330px) — manter em sincronia com .preview-stage no App.css).
+  function textStyle(c: Clip): React.CSSProperties {
+    return {
+      left: `${c.x * 100}%`,
+      top: `${c.y * 100}%`,
+      fontSize: `calc(min(36vh, 330px) * ${c.textSize})`,
+      color: c.textColor,
+      opacity: c.opacity,
+      background: c.textBox ? "rgba(0, 0, 0, 0.45)" : "transparent",
+    };
   }
 
   return (
@@ -99,7 +120,11 @@ export default function PreviewStage() {
       <div className="preview-stage" style={{ aspectRatio: `${project.width} / ${project.height}` }}>
         {activeVideo.length === 0 && <div className="preview-empty">▶</div>}
         {activeVideo.map((c) =>
-          c.kind === "image" ? (
+          c.kind === "text" ? (
+            <div key={c.id} className="preview-layer preview-text" style={textStyle(c)}>
+              {c.text}
+            </div>
+          ) : c.kind === "image" ? (
             <img
               key={c.id}
               className="preview-layer"

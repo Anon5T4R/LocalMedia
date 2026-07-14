@@ -26,3 +26,6 @@ export const uniquePath = (path: string) => cmd<string>("unique_path", { path })
 export const concatList = (id: string, files: string[]) =>
   cmd<string>("concat_list", { id, files });
 export const tmpPath = (name: string) => cmd<string>("tmp_path", { name });
+export const writeTextFile = (path: string, contents: string) =>
+  cmd<void>("write_text_file", { path, contents });
+export const readTextFile = (path: string) => cmd<string>("read_text_file", { path });

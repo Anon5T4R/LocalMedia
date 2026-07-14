@@ -321,6 +321,19 @@ pub fn tmp_path(app: tauri::AppHandle, name: String) -> Result<String, String> {
     Ok(dir.join(safe).to_string_lossy().to_string())
 }
 
+/// Grava texto num caminho escolhido pelo usuário (projetos do editor —
+/// o caminho vem sempre do diálogo de salvar).
+#[tauri::command(async)]
+pub fn write_text_file(path: String, contents: String) -> Result<(), String> {
+    std::fs::write(&path, contents).map_err(|e| format!("gravar {}: {}", path, e))
+}
+
+/// Lê texto de um caminho escolhido pelo usuário (diálogo de abrir).
+#[tauri::command(async)]
+pub fn read_text_file(path: String) -> Result<String, String> {
+    std::fs::read_to_string(&path).map_err(|e| format!("ler {}: {}", path, e))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

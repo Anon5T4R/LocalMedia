@@ -37,10 +37,17 @@ A aba **Editor** monta um projeto com vídeos, imagens e áudios juntos:
 - **Vídeo com som entra como par vinculado** (🔗 V+A): dá pra **desvincular** e cortar,
   dividir ou apagar um trecho **só do áudio ou só do vídeo**.
 - **Imagens** (PNG/JPEG/WebP/BMP) viram clipes de duração livre.
-- Timeline com arrastar, aparar pelas bordas, dividir no cursor (S), snap, zoom
-  (Ctrl+roda), desfazer/refazer e preview com play/scrub.
-- **Exportar** gera um MP4 (H.264/AAC) pela fila normal, com progresso e cancelamento —
-  a composição inteira vira um único `filter_complex` do ffmpeg.
+- **Títulos** (＋ Texto): texto por cima do vídeo com tamanho, cor, posição e fundo.
+- Por clipe: **velocidade** (0.25×–4×, com áudio corrigido), **fade in/out**,
+  **opacidade**, **rotação** e **espelhar**.
+- Timeline com arrastar, aparar pelas bordas, dividir no cursor (S), duplicar (Ctrl+D),
+  snap, zoom (Ctrl+roda), desfazer/refazer, miniaturas nos clipes e preview com
+  play/scrub (setas movem o cursor).
+- **Projeto salva e abre** (.json) e um rascunho automático segura a timeline se o app
+  fechar.
+- **Exportar** gera um MP4 (H.264/AAC, qualidade selecionável) pela fila normal, com
+  progresso e cancelamento — a composição inteira vira um único `filter_complex` do
+  ffmpeg.
 
 ## Como usar
 

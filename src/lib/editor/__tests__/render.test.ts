@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { buildTimelineExport } from "../render";
-import type { Clip, ProjectSettings } from "../model";
+import { atempoFactors, buildTimelineExport, escDrawtext } from "../render";
+import { CLIP_DEFAULTS, type Clip, type ProjectSettings } from "../model";
 
 const PROJ: ProjectSettings = { width: 1280, height: 720, fps: 30 };
 
@@ -20,6 +20,7 @@ function mkClip(over: Partial<Clip>): Clip {
     y: 0,
     w: 1,
     linkId: "",
+    ...CLIP_DEFAULTS,
     ...over,
   };
 }
@@ -117,6 +118,100 @@ describe("buildTimelineExport", () => {
     // Nenhum stream de entrada consumido mais de uma vez.
     expect(graph.match(/\[0:v\]/g)).toHaveLength(1);
     expect(graph.match(/\[0:a\]/g)).toHaveLength(1);
+  });
+
+  it("velocidade: setpts dividido no vídeo e atempo no áudio", () => {
+    const v = mkClip({ id: "v", outMs: 8000, speed: 2 });
+    const a = mkClip({ id: "a", kind: "audio", outMs: 8000, speed: 2 });
+    const graph = graphOf(buildTimelineExport(PROJ, [v, a]).steps[0]);
+    expect(graph).toContain("setpts=(PTS-STARTPTS)/2+0.000/TB");
+    expect(graph).toContain("atempo=2");
+  });
+
+  it("atempoFactors encadeia fora da faixa 0.5–2", () => {
+    expect(atempoFactors(1)).toEqual([]);
+    expect(atempoFactors(4)).toEqual([2, 2]);
+    expect(atempoFactors(3)).toEqual([2, 1.5]);
+    expect(atempoFactors(0.25)).toEqual([0.5, 0.5]);
+    expect(atempoFactors(0.4)).toEqual([0.5, 0.8]);
+  });
+
+  it("fades: alpha no vídeo e afade no áudio (nas bordas do clipe)", () => {
+    const v = mkClip({ id: "v", startMs: 1000, outMs: 5000, fadeInMs: 500, fadeOutMs: 1000 });
+    const a = mkClip({ id: "a", kind: "audio", startMs: 1000, outMs: 5000, fadeInMs: 500, fadeOutMs: 1000 });
+    const graph = graphOf(buildTimelineExport(PROJ, [v, a]).steps[0]);
+    expect(graph).toContain("format=yuva420p,fade=t=in:st=1.000:d=0.500:alpha=1,fade=t=out:st=5.000:d=1.000:alpha=1");
+    expect(graph).toContain("afade=t=in:st=0:d=0.500,afade=t=out:st=4.000:d=1.000");
+  });
+
+  it("opacidade e rotação/espelho entram na cadeia do clipe", () => {
+    const v = mkClip({ id: "v", outMs: 4000, opacity: 0.5, rotation: 90, flipH: true });
+    const graph = graphOf(buildTimelineExport(PROJ, [v]).steps[0]);
+    expect(graph).toContain("transpose=1,hflip");
+    expect(graph).toContain("colorchannelmixer=aa=0.5");
+  });
+
+  it("título vira drawtext por cima de tudo, com escaping e fonte do Windows", () => {
+    const v = mkClip({ id: "v", outMs: 6000 });
+    const t = mkClip({
+      id: "t",
+      kind: "text",
+      track: 1,
+      startMs: 1000,
+      inMs: 0,
+      outMs: 4000,
+      x: 0.1,
+      y: 0.8,
+      text: "it's 10:30",
+      textSize: 0.1,
+      textColor: "#ff8800",
+      textBox: true,
+      src: { path: "", name: "Título", durationMs: 0, width: 0, height: 0 },
+    });
+    const graph = graphOf(buildTimelineExport(PROJ, [v, t], { windows: true }).steps[0]);
+    expect(graph).toContain("fontfile=C\\\\:/Windows/Fonts/arial.ttf");
+    expect(graph).toContain("text=it\\\\\\'s 10\\\\:30");
+    expect(graph).toContain("expansion=none");
+    expect(graph).toContain("fontcolor=0xff8800@1");
+    expect(graph).toContain("fontsize=72");
+    expect(graph).toContain("x=128:y=576");
+    expect(graph).toContain("box=1:boxcolor=0x000000@0.45");
+    expect(graph).toContain("[cv1]drawtext");
+    // Linux usa fontconfig.
+    const linux = graphOf(buildTimelineExport(PROJ, [v, t]).steps[0]);
+    expect(linux).toContain("drawtext=font=Sans");
+    // Título não gera entrada -i.
+    const args = buildTimelineExport(PROJ, [v, t]).steps[0];
+    expect(args.filter((x) => x === "-i")).toHaveLength(1);
+  });
+
+  it("projeto só com título gera canvas e exporta mp4", () => {
+    const t = mkClip({
+      id: "t",
+      kind: "text",
+      outMs: 3000,
+      text: "Olá",
+      src: { path: "", name: "Título", durationMs: 0, width: 0, height: 0 },
+    });
+    const job = buildTimelineExport(PROJ, [t]);
+    expect(job.ext).toBe("mp4");
+    expect(graphOf(job.steps[0])).toContain("color=c=black");
+    expect(graphOf(job.steps[0])).toContain("[cv0]drawtext");
+  });
+
+  it("qualidade configurável muda o CRF", () => {
+    const v = mkClip({ id: "v", outMs: 3000 });
+    const args = buildTimelineExport(PROJ, [v], { crf: 26 }).steps[0];
+    const i = args.indexOf("-crf");
+    expect(args[i + 1]).toBe("26");
+  });
+
+  it("escDrawtext cobre os metacaracteres do filtergraph", () => {
+    expect(escDrawtext("a:b")).toBe("a\\\\:b");
+    expect(escDrawtext("it's")).toBe("it\\\\\\'s");
+    expect(escDrawtext("a,b;c[d]")).toBe("a\\,b\\;c\\[d\\]");
+    expect(escDrawtext("c:\\x")).toBe("c\\\\:\\\\\\\\x");
+    expect(escDrawtext("linha1\nlinha2")).toBe("linha1 linha2");
   });
 
   it("áudio mudo fica de fora (e sem nenhum áudio vai -an)", () => {

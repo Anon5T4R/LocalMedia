@@ -27,12 +27,15 @@ export default function EditorView() {
     setPlaying,
     splitAtPlayhead,
     removeSelected,
+    addTextClip,
     undo,
     redo,
     setZoom,
     addTrack,
     clearProject,
     exportProject,
+    saveProjectAs,
+    openProjectFile,
   } = useEditor.getState();
 
   const durMs = projectDurMs(clips);
@@ -62,6 +65,14 @@ export default function EditorView() {
         s.removeSelected();
       } else if (e.key.toLowerCase() === "s" && !e.ctrlKey) {
         s.splitAtPlayhead();
+      } else if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
+        e.preventDefault();
+        const step = (e.shiftKey ? 1000 : 100) * (e.key === "ArrowLeft" ? -1 : 1);
+        s.setPlaying(false);
+        s.setPlayhead(s.playheadMs + step);
+      } else if (e.ctrlKey && e.key.toLowerCase() === "d") {
+        e.preventDefault();
+        s.duplicateSelected();
       } else if (e.ctrlKey && e.key.toLowerCase() === "z" && !e.shiftKey) {
         e.preventDefault();
         s.undo();
@@ -84,6 +95,9 @@ export default function EditorView() {
       <div className="editor-toolbar">
         <button className="btn small" onClick={() => void pickMedia()}>
           ＋ Mídia
+        </button>
+        <button className="btn small" onClick={addTextClip} title="Título por cima do vídeo">
+          ＋ Texto
         </button>
         <button
           className="btn small"
@@ -124,6 +138,17 @@ export default function EditorView() {
           ＋
         </button>
         <span className="toolbar-spacer" />
+        <button className="btn small" onClick={() => void openProjectFile()} title="Abrir projeto salvo (.json)">
+          📂
+        </button>
+        <button
+          className="btn small"
+          onClick={() => void saveProjectAs()}
+          disabled={clips.length === 0}
+          title="Salvar projeto (.json) — o rascunho também fica guardado sozinho"
+        >
+          💾
+        </button>
         <button className="btn ghost small" onClick={clearProject} disabled={clips.length === 0}>
           Limpar
         </button>

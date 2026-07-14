@@ -1039,6 +1039,32 @@ input[type="radio"] {
   background: rgba(255, 255, 255, 0.3);
 }
 
+.clip-text {
+  background: color-mix(in srgb, #0ea5e9 65%, #082635);
+}
+.tl-clip.has-thumb {
+  background-size: auto 100%;
+  background-repeat: repeat-x;
+  background-position: left center;
+}
+.tl-clip.has-thumb .tl-clip-name {
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+}
+
+.preview-text {
+  white-space: nowrap;
+  line-height: 1.25;
+  padding: 0 0.25em;
+  font-family: Arial, "DejaVu Sans", sans-serif;
+  pointer-events: none;
+}
+
+.prop-row input[type="color"] {
+  width: 44px;
+  height: 30px;
+  padding: 2px;
+}
+
 .tl-playhead {
   position: absolute;
   top: 0;

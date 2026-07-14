@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
+  CLIP_DEFAULTS,
   clipDurMs,
   clipEndMs,
   moveClip,
   projectDurMs,
+  setClipSpeed,
   snapMs,
   splitClip,
   trimClip,
@@ -26,6 +28,7 @@ function mkClip(over: Partial<Clip>): Clip {
     y: 0,
     w: 1,
     linkId: "",
+    ...CLIP_DEFAULTS,
     ...over,
   };
 }
@@ -121,6 +124,44 @@ describe("splitClip", () => {
     const a = mkClip({ startMs: 1000, outMs: 3000 });
     expect(splitClip([a], "c1", 500, "x")).toHaveLength(1);
     expect(splitClip([a], "c1", 1050, "x")).toHaveLength(1);
+  });
+});
+
+describe("velocidade", () => {
+  it("2x encurta a duração na timeline pela metade", () => {
+    const a = mkClip({ startMs: 1000, inMs: 0, outMs: 8000, speed: 2 });
+    expect(clipDurMs(a)).toBe(4000);
+    expect(clipEndMs(a)).toBe(5000);
+  });
+
+  it("trim de entrada consome fonte na proporção da velocidade", () => {
+    const a = mkClip({ startMs: 0, inMs: 0, outMs: 8000, speed: 2 }); // 4s na timeline
+    const [t] = trimClip([a], "c1", "in", 1000); // avança 1s de timeline
+    expect(t.startMs).toBe(1000);
+    expect(t.inMs).toBe(2000); // 1s × 2 de fonte
+    expect(clipDurMs(t)).toBe(3000);
+  });
+
+  it("split em clipe acelerado corta a fonte no ponto certo", () => {
+    const a = mkClip({ startMs: 0, inMs: 0, outMs: 8000, speed: 2 });
+    const [l, r] = splitClip([a], "c1", 1500, "c1b");
+    expect(l.outMs).toBe(3000); // 1.5s × 2
+    expect(r.inMs).toBe(3000);
+    expect(clipDurMs(l) + clipDurMs(r)).toBe(4000);
+  });
+
+  it("setClipSpeed não deixa o clipe alongado engolir o vizinho", () => {
+    const a = mkClip({ id: "a", startMs: 0, inMs: 0, outMs: 4000, speed: 1 });
+    const b = mkClip({ id: "b", startMs: 5000, outMs: 3000 });
+    const out = setClipSpeed([a, b], "a", 0.5); // dobraria pra 8s, só cabem 5s
+    expect(out.find((c) => c.id === "a")?.speed).toBe(0.8); // 4000/5000
+  });
+
+  it("split reparte os fades entre as metades", () => {
+    const a = mkClip({ startMs: 0, outMs: 6000, fadeInMs: 500, fadeOutMs: 700 });
+    const [l, r] = splitClip([a], "c1", 3000, "c1b");
+    expect([l.fadeInMs, l.fadeOutMs]).toEqual([500, 0]);
+    expect([r.fadeInMs, r.fadeOutMs]).toEqual([0, 700]);
   });
 });
 

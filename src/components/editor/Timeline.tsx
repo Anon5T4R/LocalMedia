@@ -11,6 +11,7 @@ import {
   snapTargets,
   type Clip,
 } from "../../lib/editor/model";
+import { fileSrc } from "../../lib/backend";
 import { fmtDur } from "../../lib/time";
 import { useEditor } from "../../state/editor";
 
@@ -32,6 +33,7 @@ export default function Timeline() {
   const videoTracks = useEditor((s) => s.videoTracks);
   const audioTracks = useEditor((s) => s.audioTracks);
   const selectedId = useEditor((s) => s.selectedId);
+  const thumbs = useEditor((s) => s.thumbs);
   const playheadMs = useEditor((s) => s.playheadMs);
   const pxPerSec = useEditor((s) => s.pxPerSec);
   const select = useEditor((s) => s.select);
@@ -182,10 +184,13 @@ export default function Timeline() {
               {rowClips(kind, track).map((c) => (
                 <div
                   key={c.id}
-                  className={`tl-clip clip-${c.kind} ${selectedId === c.id ? "selected" : ""} ${c.muted ? "muted" : ""}`}
+                  className={`tl-clip clip-${c.kind} ${selectedId === c.id ? "selected" : ""} ${c.muted ? "muted" : ""} ${c.kind === "video" && thumbs[c.src.path] ? "has-thumb" : ""}`}
                   style={{
                     left: `${c.startMs * pxPerMs}px`,
                     width: `${Math.max(4, clipDurMs(c) * pxPerMs)}px`,
+                    ...(c.kind === "video" && thumbs[c.src.path]
+                      ? { backgroundImage: `url("${fileSrc(thumbs[c.src.path])}")` }
+                      : {}),
                   }}
                   onPointerDown={(e) => onClipPointerDown(e, c, "move")}
                   onPointerMove={onClipPointerMove}
@@ -194,7 +199,8 @@ export default function Timeline() {
                   <span className="tl-clip-name">
                     {c.linkId && <span title="vinculado ao par áudio/vídeo">🔗 </span>}
                     {c.muted && "🔇 "}
-                    {c.src.name}
+                    {c.speed !== 1 && `${c.speed}× `}
+                    {c.kind === "text" ? `𝐓 ${c.text || "Título"}` : c.src.name}
                   </span>
                   <span
                     className="tl-handle left"

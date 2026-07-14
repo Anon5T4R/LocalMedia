@@ -10,7 +10,7 @@
  *  - Clipes da mesma trilha nunca se sobrepõem (mover/aparar respeita os
  *    vizinhos). */
 
-export type ClipKind = "video" | "image" | "audio";
+export type ClipKind = "video" | "image" | "audio" | "text";
 
 /** De onde o clipe veio (subconjunto do MediaInfo que o editor precisa). */
 export interface SourceRef {
@@ -43,7 +43,39 @@ export interface Clip {
   w: number;
   /** Clipes com o mesmo linkId (≠ "") se movem juntos. */
   linkId: string;
+  /** Velocidade de reprodução (0.25–4; 1 = normal). Vídeo e áudio; a duração
+   *  na timeline é (outMs - inMs) / speed. */
+  speed: number;
+  /** Fades nas bordas do clipe, em ms da timeline (0 = sem fade). */
+  fadeInMs: number;
+  fadeOutMs: number;
+  /** Vídeo/imagem: opacidade da camada (0.1–1). */
+  opacity: number;
+  /** Vídeo/imagem: rotação fixa e espelhar na horizontal. */
+  rotation: 0 | 90 | 180 | 270;
+  flipH: boolean;
+  /** Título (kind "text"): conteúdo, tamanho (fração da altura do projeto),
+   *  cor #rrggbb e fundo semitransparente. Posição reaproveita x/y. */
+  text: string;
+  textSize: number;
+  textColor: string;
+  textBox: boolean;
 }
+
+/** Valores default dos campos novos (útil pra criar clipes e pra migrar
+ *  projetos salvos por versões antigas). */
+export const CLIP_DEFAULTS = {
+  speed: 1,
+  fadeInMs: 0,
+  fadeOutMs: 0,
+  opacity: 1,
+  rotation: 0 as const,
+  flipH: false,
+  text: "",
+  textSize: 0.08,
+  textColor: "#ffffff",
+  textBox: false,
+};
 
 export interface ProjectSettings {
   width: number;
@@ -55,16 +87,21 @@ export interface ProjectSettings {
 export const MIN_CLIP_MS = 100;
 
 export function clipDurMs(c: Clip): number {
-  return c.outMs - c.inMs;
+  return Math.round((c.outMs - c.inMs) / c.speed);
+}
+
+/** Fonte "infinita" (imagem/título): o trim só muda a duração exibida. */
+export function isFreeSource(kind: ClipKind): boolean {
+  return kind === "image" || kind === "text";
 }
 
 export function clipEndMs(c: Clip): number {
   return c.startMs + clipDurMs(c);
 }
 
-/** Clipes de trilha de vídeo (vídeo + imagem) vs. trilha de áudio. */
+/** Clipes de trilha de vídeo (vídeo/imagem/título) vs. trilha de áudio. */
 export function isVideoKind(kind: ClipKind): boolean {
-  return kind === "video" || kind === "image";
+  return kind === "video" || kind === "image" || kind === "text";
 }
 
 /** Fim do projeto = fim do último clipe. */
@@ -137,16 +174,16 @@ export function trimClip(
 
   if (edge === "in") {
     let newStart = Math.max(lo, Math.min(desiredMs, end - MIN_CLIP_MS));
-    if (clip.kind !== "image") {
-      // Não dá pra recuar antes do início da fonte.
-      newStart = Math.max(newStart, clip.startMs - clip.inMs);
+    if (!isFreeSource(clip.kind)) {
+      // Não dá pra recuar antes do início da fonte (em ms de timeline,
+      // o material disponível antes do in é inMs / speed).
+      newStart = Math.max(newStart, clip.startMs - clip.inMs / clip.speed);
     }
     const delta = newStart - clip.startMs;
     if (delta === 0) return clips;
-    const patch =
-      clip.kind === "image"
-        ? { startMs: newStart, outMs: clip.outMs - delta }
-        : { startMs: newStart, inMs: clip.inMs + delta };
+    const patch = isFreeSource(clip.kind)
+      ? { startMs: newStart, outMs: clip.outMs - delta }
+      : { startMs: newStart, inMs: clip.inMs + delta * clip.speed };
     return clips.map((c) => (c.id === id ? { ...c, ...patch } : c));
   }
 
@@ -158,12 +195,32 @@ export function trimClip(
     .sort((a, b) => a.startMs - b.startMs)[0];
   let newEnd = Math.max(clip.startMs + MIN_CLIP_MS, desiredMs);
   if (next) newEnd = Math.min(newEnd, next.startMs);
-  if (clip.kind !== "image" && clip.src.durationMs > 0) {
-    newEnd = Math.min(newEnd, clip.startMs + (clip.src.durationMs - clip.inMs));
+  if (!isFreeSource(clip.kind) && clip.src.durationMs > 0) {
+    newEnd = Math.min(
+      newEnd,
+      clip.startMs + (clip.src.durationMs - clip.inMs) / clip.speed,
+    );
   }
-  const newOut = clip.inMs + (newEnd - clip.startMs);
+  const newOut = clip.inMs + (newEnd - clip.startMs) * clip.speed;
   if (newOut === clip.outMs) return clips;
   return clips.map((c) => (c.id === id ? { ...c, outMs: newOut } : c));
+}
+
+/** Muda a velocidade do clipe. Desacelerar alonga a duração na timeline, então
+ *  a velocidade é reclamplada pro clipe não engolir o vizinho da direita. */
+export function setClipSpeed(clips: Clip[], id: string, desiredSpeed: number): Clip[] {
+  const clip = clips.find((c) => c.id === id);
+  if (!clip) return clips;
+  let speed = Math.max(0.25, Math.min(4, desiredSpeed));
+  const group = isVideoKind(clip.kind) ? "video" : "audio";
+  const next = trackClips(clips, group, clip.track)
+    .filter((c) => c.id !== id && c.startMs >= clipEndMs(clip))
+    .sort((a, b) => a.startMs - b.startMs)[0];
+  if (next) {
+    const maxDur = next.startMs - clip.startMs;
+    speed = Math.max(speed, (clip.outMs - clip.inMs) / maxDur);
+  }
+  return clips.map((c) => (c.id === id ? { ...c, speed } : c));
 }
 
 /** Divide um clipe no instante atMs da timeline (se cair dentro dele).
@@ -179,13 +236,15 @@ export function splitClip(
   const clip = clips.find((c) => c.id === id);
   if (!clip) return clips;
   if (atMs < clip.startMs + MIN_CLIP_MS || atMs > clipEndMs(clip) - MIN_CLIP_MS) return clips;
-  const cutIn = clip.inMs + (atMs - clip.startMs);
-  const left: Clip = { ...clip, outMs: cutIn };
+  const cutIn = clip.inMs + (atMs - clip.startMs) * clip.speed;
+  // Cada metade fica só com o fade da própria borda externa.
+  const left: Clip = { ...clip, outMs: cutIn, fadeOutMs: 0 };
   const right: Clip = {
     ...clip,
     id: newId,
     startMs: atMs,
     inMs: cutIn,
+    fadeInMs: 0,
     linkId: linkIdRight ?? clip.linkId,
   };
   const idx = clips.findIndex((c) => c.id === id);

@@ -27,7 +27,9 @@ pub fn run() {
             ffmpeg::ff_cancel,
             ffmpeg::unique_path,
             ffmpeg::concat_list,
-            ffmpeg::tmp_path
+            ffmpeg::tmp_path,
+            ffmpeg::write_text_file,
+            ffmpeg::read_text_file
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")
