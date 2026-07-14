@@ -1,6 +1,7 @@
-// Estado do editor: projeto, clipes, playhead e as ações da timeline.
+// Estado do editor: projeto, clipes, trilhas, playhead e as ações da timeline.
 // As operações pesadas são puras (lib/editor/model.ts); aqui fica a cola:
-// gestos com undo/redo, importação de mídia e exportação pra fila existente.
+// gestos com undo/redo, importação/colocação de mídia (inclusive soltar na
+// trilha certa), trilhas com ocultar/mudo/solo e exportação pra fila.
 
 import { create } from "zustand";
 import { open, save } from "@tauri-apps/plugin-dialog";
@@ -8,16 +9,24 @@ import * as be from "../lib/backend";
 import { parseProbe } from "../lib/probe";
 import {
   CLIP_DEFAULTS,
+  bestGapStart,
+  clipDurMs,
   clipEndMs,
+  defaultAudioTrack,
+  defaultVideoTrack,
   isVideoKind,
   moveClip,
   projectDurMs,
+  rippleDelete,
   setClipSpeed,
   splitClip,
   trackClips,
   trimClip,
+  visibleClips,
+  type AudioTrackOpts,
   type Clip,
   type ProjectSettings,
+  type VideoTrackOpts,
 } from "../lib/editor/model";
 import { buildTimelineExport } from "../lib/editor/render";
 import { IMAGE_EXTENSIONS, type MediaInfo } from "../lib/types";
@@ -45,13 +54,21 @@ const IMAGE_DEFAULT_MS = 5000;
 const TEXT_DEFAULT_MS = 4000;
 const AUTOSAVE_KEY = "editor-autosave-v1";
 
-/** Formato do arquivo de projeto (.json) e do autosave. */
+/** Onde um arquivo foi solto na timeline (hit-test feito pela Timeline). */
+export interface DropTarget {
+  group: "video" | "audio";
+  track: number;
+  ms: number;
+}
+
+/** Formato do arquivo de projeto (.json) e do autosave. A v1 guardava só a
+ *  contagem de trilhas; a v2 guarda o estado (ocultar/mudo/solo) de cada uma. */
 interface ProjectFile {
-  version: 1;
+  version: 2;
   project: ProjectSettings;
   exportCrf: number;
-  videoTracks: number;
-  audioTracks: number;
+  vTracks: VideoTrackOpts[];
+  aTracks: AudioTrackOpts[];
   clips: Clip[];
 }
 
@@ -64,21 +81,44 @@ function sanitizeClips(raw: unknown): Clip[] {
     .map((c) => ({ ...CLIP_DEFAULTS, ...c }));
 }
 
+/** Lê as trilhas de um projeto salvo, migrando o formato v1 (contagens). */
+function sanitizeTracks(raw: {
+  vTracks?: unknown;
+  aTracks?: unknown;
+  videoTracks?: unknown;
+  audioTracks?: unknown;
+}): { vTracks: VideoTrackOpts[]; aTracks: AudioTrackOpts[] } {
+  const clampLen = (n: unknown) => Math.max(1, Math.min(MAX_TRACKS, Number(n) || 1));
+  const vTracks = Array.isArray(raw.vTracks)
+    ? raw.vTracks.slice(0, MAX_TRACKS).map((t) => ({ ...defaultVideoTrack(), ...t }))
+    : Array.from({ length: clampLen(raw.videoTracks) }, defaultVideoTrack);
+  const aTracks = Array.isArray(raw.aTracks)
+    ? raw.aTracks.slice(0, MAX_TRACKS).map((t) => ({ ...defaultAudioTrack(), ...t }))
+    : Array.from({ length: clampLen(raw.audioTracks) }, defaultAudioTrack);
+  return {
+    vTracks: vTracks.length > 0 ? vTracks : [defaultVideoTrack()],
+    aTracks: aTracks.length > 0 ? aTracks : [defaultAudioTrack()],
+  };
+}
+
 interface Snapshot {
   clips: Clip[];
-  videoTracks: number;
-  audioTracks: number;
+  vTracks: VideoTrackOpts[];
+  aTracks: AudioTrackOpts[];
 }
 
 interface EditorState {
   project: ProjectSettings;
   clips: Clip[];
-  videoTracks: number;
-  audioTracks: number;
+  vTracks: VideoTrackOpts[];
+  aTracks: AudioTrackOpts[];
   selectedId: string;
   playheadMs: number;
   playing: boolean;
   pxPerSec: number;
+  snapOn: boolean;
+  /** Área de transferência de clipes (Ctrl+C/Ctrl+V). */
+  clipboard: Clip[];
   /** Miniatura por caminho de fonte (pros blocos da timeline). */
   thumbs: Record<string, string>;
   /** CRF da exportação (18 máxima · 20 alta · 26 compacta). */
@@ -87,10 +127,13 @@ interface EditorState {
   redoStack: Snapshot[];
 
   addMediaPaths(paths: string[]): Promise<void>;
+  /** Igual ao addMediaPaths, mas mirando trilha/tempo (soltar na timeline). */
+  addMediaPathsAt(paths: string[], target?: DropTarget): Promise<void>;
   select(id: string): void;
   setPlayhead(ms: number): void;
   setPlaying(playing: boolean): void;
   setZoom(pxPerSec: number): void;
+  toggleSnap(): void;
 
   /** Chamar UMA vez no início de um gesto de arrastar/aparar (grava o undo). */
   beginGesture(): void;
@@ -99,8 +142,12 @@ interface EditorState {
 
   splitAtPlayhead(): void;
   removeSelected(): void;
+  /** Remove e fecha o buraco (montagem — Shift+Delete). */
+  rippleRemoveSelected(): void;
   unlinkSelected(): void;
   duplicateSelected(): void;
+  copySelected(): void;
+  pasteAtPlayhead(): void;
   setGain(id: string, gain: number): void;
   toggleMute(id: string): void;
   setFit(id: string, fit: Clip["fit"]): void;
@@ -118,6 +165,11 @@ interface EditorState {
   setProject(patch: Partial<ProjectSettings>): void;
   setExportCrf(crf: number): void;
   addTrack(kind: "video" | "audio"): void;
+  /** Remove a trilha de cima do grupo, se estiver vazia. */
+  removeTrack(kind: "video" | "audio"): void;
+  toggleTrackHidden(track: number): void;
+  toggleTrackMuted(track: number): void;
+  toggleTrackSolo(track: number): void;
   clearProject(): void;
 
   undo(): void;
@@ -128,7 +180,7 @@ interface EditorState {
 }
 
 function snap(s: EditorState): Snapshot {
-  return { clips: s.clips, videoTracks: s.videoTracks, audioTracks: s.audioTracks };
+  return { clips: s.clips, vTracks: s.vTracks, aTracks: s.aTracks };
 }
 
 /** Fim da trilha (onde um clipe novo deve ser anexado). */
@@ -163,18 +215,24 @@ function requestThumb(path: string, durationMs: number) {
 export const useEditor = create<EditorState>((set, get) => ({
   project: { width: 1280, height: 720, fps: 30 },
   clips: [],
-  videoTracks: 1,
-  audioTracks: 1,
+  vTracks: [defaultVideoTrack()],
+  aTracks: [defaultAudioTrack()],
   selectedId: "",
   playheadMs: 0,
   playing: false,
   pxPerSec: 60,
+  snapOn: true,
+  clipboard: [],
   thumbs: {},
   exportCrf: 20,
   undoStack: [],
   redoStack: [],
 
   async addMediaPaths(paths) {
+    return get().addMediaPathsAt(paths);
+  },
+
+  async addMediaPathsAt(paths, target) {
     const toast = useUi.getState().toast;
     for (const path of paths) {
       let info: MediaInfo;
@@ -185,6 +243,12 @@ export const useEditor = create<EditorState>((set, get) => ({
         continue;
       }
       const isImage = IMAGE_EXTENSIONS.includes(extOf(path));
+      const hasVideo = !isImage && info.video !== null && info.durationMs > 0;
+      const hasAudio = !isImage && info.audio.length > 0 && info.durationMs > 0;
+      if (!isImage && !hasVideo && !hasAudio) {
+        toast("error", `${info.name}: sem vídeo nem áudio utilizável.`);
+        continue;
+      }
       const s = get();
       const src = {
         path,
@@ -193,7 +257,7 @@ export const useEditor = create<EditorState>((set, get) => ({
         width: info.video?.width ?? 0,
         height: info.video?.height ?? 0,
       };
-      const added: Clip[] = [];
+      if (hasVideo) requestThumb(path, info.durationMs);
       const common = {
         src,
         gain: 1,
@@ -204,71 +268,150 @@ export const useEditor = create<EditorState>((set, get) => ({
         w: 1,
         ...CLIP_DEFAULTS,
       };
-      if (info.video && !isImage) requestThumb(path, info.durationMs);
+      const pip = { fit: "custom" as const, x: 0.6, y: 0.05, w: 0.35 };
+
+      const added: Clip[] = [];
+      let vTracks = s.vTracks;
+      let aTracks = s.aTracks;
+
+      // Primeira faixa de áudio com espaço no instante `at` (cria se der).
+      const freeAudioTrack = (at: number, dur: number): number => {
+        for (let t = 0; t < aTracks.length; t++) {
+          if (fitsAt(s.clips, "audio", t, at, dur)) return t;
+        }
+        if (aTracks.length < MAX_TRACKS) {
+          aTracks = [...aTracks, defaultAudioTrack()];
+          return aTracks.length - 1;
+        }
+        return -1;
+      };
 
       if (isImage) {
+        let track = 0;
+        let at: number;
+        let overlay = false;
+        if (target) {
+          track = target.group === "video" ? Math.min(target.track, vTracks.length - 1) : 0;
+          at = bestGapStart(s.clips, "video", track, Math.max(0, target.ms), IMAGE_DEFAULT_MS);
+          overlay = track > 0;
+        } else if (s.clips.some((c) => isVideoKind(c.kind))) {
+          // Já tem vídeo → a imagem entra como CAMADA (PiP) acima da base,
+          // no playhead — comportamento de editor profissional.
+          let t = -1;
+          for (let i = 1; i < vTracks.length; i++) {
+            if (fitsAt(s.clips, "video", i, s.playheadMs, IMAGE_DEFAULT_MS)) {
+              t = i;
+              break;
+            }
+          }
+          if (t === -1 && vTracks.length < MAX_TRACKS) {
+            vTracks = [...vTracks, defaultVideoTrack()];
+            t = vTracks.length - 1;
+          }
+          if (t !== -1) {
+            track = t;
+            at = s.playheadMs;
+            overlay = true;
+          } else {
+            at = trackEndMs(s.clips, "video", 0);
+          }
+        } else {
+          at = 0;
+        }
         added.push({
           id: newId(),
           kind: "image",
-          track: 0,
-          startMs: trackEndMs(s.clips, "video", 0),
+          track,
+          startMs: at,
           inMs: 0,
           outMs: IMAGE_DEFAULT_MS,
           linkId: "",
           ...common,
+          ...(overlay ? pip : {}),
         });
-      } else if (info.video && info.durationMs > 0) {
-        // Vídeo (com áudio → par vinculado alinhado no fim das duas trilhas).
-        const at = Math.max(
-          trackEndMs(s.clips, "video", 0),
-          info.audio.length > 0 ? trackEndMs(s.clips, "audio", 0) : 0,
-        );
-        const linkId = info.audio.length > 0 ? newId() : "";
+      } else if (hasVideo) {
+        const linkId = hasAudio ? newId() : "";
+        let vTrack = 0;
+        let at: number;
+        if (target) {
+          vTrack = target.group === "video" ? Math.min(target.track, vTracks.length - 1) : 0;
+          at = bestGapStart(s.clips, "video", vTrack, Math.max(0, target.ms), info.durationMs);
+        } else {
+          at = Math.max(
+            trackEndMs(s.clips, "video", 0),
+            hasAudio ? trackEndMs(s.clips, "audio", 0) : 0,
+          );
+        }
         added.push({
           id: newId(),
           kind: "video",
-          track: 0,
+          track: vTrack,
           startMs: at,
           inMs: 0,
           outMs: info.durationMs,
           linkId,
           ...common,
+          // Solto numa camada de cima → entra como PiP.
+          ...(target && vTrack > 0 ? pip : {}),
         });
-        if (info.audio.length > 0) {
-          added.push({
-            id: newId(),
-            kind: "audio",
-            track: 0,
-            startMs: at,
-            inMs: 0,
-            outMs: info.durationMs,
-            linkId,
-            ...common,
-          });
+        if (hasAudio) {
+          const aTrack = target ? freeAudioTrack(at, info.durationMs) : 0;
+          if (aTrack >= 0) {
+            added.push({
+              id: newId(),
+              kind: "audio",
+              track: aTrack,
+              startMs: at,
+              inMs: 0,
+              outMs: info.durationMs,
+              linkId,
+              ...common,
+            });
+          } else {
+            added[added.length - 1] = { ...added[added.length - 1], linkId: "" };
+            toast("info", `${info.name}: sem faixa de áudio livre — só o vídeo entrou.`);
+          }
         }
-      } else if (info.audio.length > 0 && info.durationMs > 0) {
+      } else {
+        // Só áudio: no alvo do drop, ou no playhead na primeira faixa livre
+        // (é assim que se põe música em cima do som do vídeo sem arrastar).
+        let track: number;
+        let at: number;
+        if (target && target.group === "audio") {
+          track = Math.min(target.track, aTracks.length - 1);
+          at = bestGapStart(s.clips, "audio", track, Math.max(0, target.ms), info.durationMs);
+        } else {
+          const ref = target ? Math.max(0, target.ms) : s.playheadMs;
+          const t = freeAudioTrack(ref, info.durationMs);
+          if (t >= 0) {
+            track = t;
+            at = ref;
+          } else {
+            track = 0;
+            at = trackEndMs(s.clips, "audio", 0);
+          }
+        }
         added.push({
           id: newId(),
           kind: "audio",
-          track: 0,
-          startMs: trackEndMs(s.clips, "audio", 0),
+          track,
+          startMs: at,
           inMs: 0,
           outMs: info.durationMs,
           linkId: "",
           ...common,
         });
-      } else {
-        toast("error", `${info.name}: sem vídeo nem áudio utilizável.`);
-        continue;
       }
 
       // O primeiro vídeo define o formato do projeto.
       const firstVideo =
-        !s.clips.some((c) => c.kind === "video") && info.video && !isImage ? info.video : null;
+        !s.clips.some((c) => c.kind === "video") && hasVideo ? info.video : null;
       set((st) => ({
         undoStack: [...st.undoStack.slice(-49), snap(st)],
         redoStack: [],
         clips: [...st.clips, ...added],
+        vTracks,
+        aTracks,
         selectedId: added[0].id,
         ...(firstVideo
           ? {
@@ -300,6 +443,10 @@ export const useEditor = create<EditorState>((set, get) => ({
     set({ pxPerSec: Math.max(8, Math.min(400, pxPerSec)) });
   },
 
+  toggleSnap() {
+    set((s) => ({ snapOn: !s.snapOn }));
+  },
+
   beginGesture() {
     set((s) => ({ undoStack: [...s.undoStack.slice(-49), snap(s)], redoStack: [] }));
   },
@@ -310,7 +457,7 @@ export const useEditor = create<EditorState>((set, get) => ({
       const clip = clips.find((c) => c.id === id);
       if (!clip) return {};
       if (toTrack !== undefined && toTrack !== clip.track) {
-        const max = isVideoKind(clip.kind) ? s.videoTracks : s.audioTracks;
+        const max = isVideoKind(clip.kind) ? s.vTracks.length : s.aTracks.length;
         const t = Math.max(0, Math.min(max - 1, toTrack));
         if (t !== clip.track) clips = clips.map((c) => (c.id === id ? { ...c, track: t } : c));
       }
@@ -366,6 +513,18 @@ export const useEditor = create<EditorState>((set, get) => ({
     }));
   },
 
+  rippleRemoveSelected() {
+    const s = get();
+    const clip = s.clips.find((c) => c.id === s.selectedId);
+    if (!clip) return;
+    set((st) => ({
+      undoStack: [...st.undoStack.slice(-49), snap(st)],
+      redoStack: [],
+      clips: rippleDelete(st.clips, clip.id),
+      selectedId: "",
+    }));
+  },
+
   unlinkSelected() {
     const s = get();
     const clip = s.clips.find((c) => c.id === s.selectedId);
@@ -393,6 +552,42 @@ export const useEditor = create<EditorState>((set, get) => ({
       redoStack: [],
       clips: [...st.clips, copy],
       selectedId: copy.id,
+    }));
+  },
+
+  copySelected() {
+    const s = get();
+    const clip = s.clips.find((c) => c.id === s.selectedId);
+    if (!clip) return;
+    const partner = clip.linkId
+      ? s.clips.find((c) => c.id !== clip.id && c.linkId === clip.linkId)
+      : undefined;
+    set({ clipboard: partner ? [clip, partner] : [clip] });
+    useUi.getState().toast("info", partner ? "Par copiado." : "Clipe copiado.");
+  },
+
+  pasteAtPlayhead() {
+    const s = get();
+    if (s.clipboard.length === 0) return;
+    const main = s.clipboard[0];
+    const group = isVideoKind(main.kind) ? "video" : "audio";
+    const at = bestGapStart(s.clips, group, main.track, s.playheadMs, clipDurMs(main));
+    const linkId = s.clipboard.length > 1 ? newId() : "";
+    const pasted: Clip[] = [{ ...main, id: newId(), startMs: at, linkId }];
+    if (s.clipboard.length > 1) {
+      const partner = s.clipboard[1];
+      const pGroup = isVideoKind(partner.kind) ? "video" : "audio";
+      if (fitsAt(s.clips, pGroup, partner.track, at, clipDurMs(partner))) {
+        pasted.push({ ...partner, id: newId(), startMs: at, linkId });
+      } else {
+        pasted[0] = { ...pasted[0], linkId: "" };
+      }
+    }
+    set((st) => ({
+      undoStack: [...st.undoStack.slice(-49), snap(st)],
+      redoStack: [],
+      clips: [...st.clips, ...pasted],
+      selectedId: pasted[0].id,
     }));
   },
 
@@ -472,7 +667,7 @@ export const useEditor = create<EditorState>((set, get) => ({
   addTextClip() {
     const s = get();
     // Título entra na trilha de vídeo de cima, no playhead se houver espaço.
-    const track = s.videoTracks - 1;
+    const track = s.vTracks.length - 1;
     const at = fitsAt(s.clips, "video", track, s.playheadMs, TEXT_DEFAULT_MS)
       ? s.playheadMs
       : trackEndMs(s.clips, "video", track);
@@ -529,9 +724,52 @@ export const useEditor = create<EditorState>((set, get) => ({
   addTrack(kind) {
     set((s) =>
       kind === "video"
-        ? { videoTracks: Math.min(MAX_TRACKS, s.videoTracks + 1) }
-        : { audioTracks: Math.min(MAX_TRACKS, s.audioTracks + 1) },
+        ? s.vTracks.length < MAX_TRACKS
+          ? { vTracks: [...s.vTracks, defaultVideoTrack()] }
+          : {}
+        : s.aTracks.length < MAX_TRACKS
+          ? { aTracks: [...s.aTracks, defaultAudioTrack()] }
+          : {},
     );
+  },
+
+  removeTrack(kind) {
+    const s = get();
+    const len = kind === "video" ? s.vTracks.length : s.aTracks.length;
+    if (len <= 1) return;
+    const top = len - 1;
+    const busy = s.clips.some((c) =>
+      kind === "video" ? isVideoKind(c.kind) && c.track === top : c.kind === "audio" && c.track === top,
+    );
+    if (busy) {
+      useUi.getState().toast("info", "A trilha de cima ainda tem clipes.");
+      return;
+    }
+    set((st) => ({
+      undoStack: [...st.undoStack.slice(-49), snap(st)],
+      redoStack: [],
+      ...(kind === "video"
+        ? { vTracks: st.vTracks.slice(0, -1) }
+        : { aTracks: st.aTracks.slice(0, -1) }),
+    }));
+  },
+
+  toggleTrackHidden(track) {
+    set((s) => ({
+      vTracks: s.vTracks.map((t, i) => (i === track ? { ...t, hidden: !t.hidden } : t)),
+    }));
+  },
+
+  toggleTrackMuted(track) {
+    set((s) => ({
+      aTracks: s.aTracks.map((t, i) => (i === track ? { ...t, muted: !t.muted } : t)),
+    }));
+  },
+
+  toggleTrackSolo(track) {
+    set((s) => ({
+      aTracks: s.aTracks.map((t, i) => (i === track ? { ...t, solo: !t.solo } : t)),
+    }));
   },
 
   clearProject() {
@@ -572,12 +810,14 @@ export const useEditor = create<EditorState>((set, get) => ({
   async exportProject() {
     const s = get();
     const toast = useUi.getState().toast;
-    if (s.clips.length === 0) {
-      toast("info", "Adicione clipes na timeline antes de exportar.");
+    // Trilha oculta e áudio mudo/sem-solo ficam fora, como no preview.
+    const visible = visibleClips(s.clips, s.vTracks, s.aTracks);
+    if (visible.length === 0) {
+      toast("info", "Nada visível pra exportar — confira as trilhas ocultas/mudas.");
       return;
     }
     set({ playing: false });
-    const built = buildTimelineExport(s.project, s.clips, {
+    const built = buildTimelineExport(s.project, visible, {
       crf: s.exportCrf,
       windows: IS_WINDOWS,
     });
@@ -610,11 +850,11 @@ export const useEditor = create<EditorState>((set, get) => ({
     }).catch(() => null);
     if (!out) return;
     const file: ProjectFile = {
-      version: 1,
+      version: 2,
       project: s.project,
       exportCrf: s.exportCrf,
-      videoTracks: s.videoTracks,
-      audioTracks: s.audioTracks,
+      vTracks: s.vTracks,
+      aTracks: s.aTracks,
       clips: s.clips,
     };
     try {
@@ -634,17 +874,17 @@ export const useEditor = create<EditorState>((set, get) => ({
     }).catch(() => null);
     if (!picked || Array.isArray(picked)) return;
     try {
-      const raw = JSON.parse(await be.readTextFile(picked)) as Partial<ProjectFile>;
+      const raw = JSON.parse(await be.readTextFile(picked)) as Record<string, unknown>;
       const clips = sanitizeClips(raw.clips);
       if (clips.length === 0) throw new Error("arquivo sem clipes válidos");
+      const tracks = sanitizeTracks(raw);
       set((st) => ({
         undoStack: [...st.undoStack.slice(-49), snap(st)],
         redoStack: [],
         clips,
-        project: raw.project ?? st.project,
-        exportCrf: raw.exportCrf ?? st.exportCrf,
-        videoTracks: Math.max(1, Math.min(MAX_TRACKS, raw.videoTracks ?? 1)),
-        audioTracks: Math.max(1, Math.min(MAX_TRACKS, raw.audioTracks ?? 1)),
+        project: (raw.project as ProjectSettings) ?? st.project,
+        exportCrf: (raw.exportCrf as number) ?? st.exportCrf,
+        ...tracks,
         selectedId: "",
         playheadMs: 0,
         playing: false,
@@ -664,15 +904,14 @@ export const useEditor = create<EditorState>((set, get) => ({
 try {
   const raw = localStorage.getItem(AUTOSAVE_KEY);
   if (raw) {
-    const saved = JSON.parse(raw) as Partial<ProjectFile>;
+    const saved = JSON.parse(raw) as Record<string, unknown>;
     const clips = sanitizeClips(saved.clips);
     if (clips.length > 0) {
       useEditor.setState({
         clips,
-        project: saved.project ?? { width: 1280, height: 720, fps: 30 },
-        exportCrf: saved.exportCrf ?? 20,
-        videoTracks: Math.max(1, Math.min(MAX_TRACKS, saved.videoTracks ?? 1)),
-        audioTracks: Math.max(1, Math.min(MAX_TRACKS, saved.audioTracks ?? 1)),
+        project: (saved.project as ProjectSettings) ?? { width: 1280, height: 720, fps: 30 },
+        exportCrf: (saved.exportCrf as number) ?? 20,
+        ...sanitizeTracks(saved),
       });
       for (const c of clips) {
         if (c.kind === "video") requestThumb(c.src.path, c.src.durationMs);
@@ -689,8 +928,8 @@ useEditor.subscribe((s, prev) => {
     s.clips === prev.clips &&
     s.project === prev.project &&
     s.exportCrf === prev.exportCrf &&
-    s.videoTracks === prev.videoTracks &&
-    s.audioTracks === prev.audioTracks
+    s.vTracks === prev.vTracks &&
+    s.aTracks === prev.aTracks
   ) {
     return;
   }
@@ -698,11 +937,11 @@ useEditor.subscribe((s, prev) => {
   autosaveTimer = setTimeout(() => {
     const st = useEditor.getState();
     const file: ProjectFile = {
-      version: 1,
+      version: 2,
       project: st.project,
       exportCrf: st.exportCrf,
-      videoTracks: st.videoTracks,
-      audioTracks: st.audioTracks,
+      vTracks: st.vTracks,
+      aTracks: st.aTracks,
       clips: st.clips,
     };
     try {

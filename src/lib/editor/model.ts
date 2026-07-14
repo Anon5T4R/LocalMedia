@@ -83,6 +83,46 @@ export interface ProjectSettings {
   fps: number;
 }
 
+/** Estado por trilha (como nos NLEs: olhinho no vídeo, M/S no áudio). */
+export interface VideoTrackOpts {
+  hidden: boolean;
+}
+export interface AudioTrackOpts {
+  muted: boolean;
+  solo: boolean;
+}
+
+export function defaultVideoTrack(): VideoTrackOpts {
+  return { hidden: false };
+}
+export function defaultAudioTrack(): AudioTrackOpts {
+  return { muted: false, solo: false };
+}
+
+/** Trilhas de áudio audíveis: com solo ativo, só as em solo tocam; sem solo,
+ *  todas menos as mudas. */
+export function audibleAudioTracks(aTracks: AudioTrackOpts[]): Set<number> {
+  const solo = aTracks.some((t) => t.solo);
+  const out = new Set<number>();
+  aTracks.forEach((t, i) => {
+    if (solo ? t.solo : !t.muted) out.add(i);
+  });
+  return out;
+}
+
+/** Filtra os clipes que participam do preview/exportação, respeitando
+ *  trilha de vídeo oculta e mudo/solo de áudio. */
+export function visibleClips(
+  clips: Clip[],
+  vTracks: VideoTrackOpts[],
+  aTracks: AudioTrackOpts[],
+): Clip[] {
+  const audible = audibleAudioTracks(aTracks);
+  return clips.filter((c) =>
+    isVideoKind(c.kind) ? !vTracks[c.track]?.hidden : audible.has(c.track),
+  );
+}
+
 /** Duração mínima de um clipe (evita clipe de largura zero). */
 export const MIN_CLIP_MS = 100;
 
@@ -251,6 +291,67 @@ export function splitClip(
   const out = clips.slice();
   out.splice(idx, 1, left, right);
   return out;
+}
+
+/** Ripple delete (montagem): remove o clipe (e o par vinculado) e fecha o
+ *  buraco puxando pra esquerda o que vem depois NA MESMA TRILHA — como o
+ *  par V/A anda alinhado, a sequência principal continua em sincronia.
+ *  Clipes de outras trilhas não se movem. */
+export function rippleDelete(clips: Clip[], id: string): Clip[] {
+  const clip = clips.find((c) => c.id === id);
+  if (!clip) return clips;
+  const partner = clip.linkId
+    ? clips.find((c) => c.id !== id && c.linkId === clip.linkId)
+    : undefined;
+  const removed = partner ? [clip, partner] : [clip];
+  const removedIds = new Set(removed.map((c) => c.id));
+  let out = clips.filter((c) => !removedIds.has(c.id));
+  for (const r of removed) {
+    const group = isVideoKind(r.kind) ? "video" : "audio";
+    const sameTrack = trackClips(out, group, r.track);
+    const after = sameTrack.filter((c) => c.startMs >= clipEndMs(r));
+    if (after.length === 0) continue;
+    // O deslocamento fecha a duração removida, sem engolir clipes restantes.
+    const prevEnd = sameTrack
+      .filter((c) => clipEndMs(c) <= r.startMs)
+      .reduce((acc, c) => Math.max(acc, clipEndMs(c)), 0);
+    const shift = Math.min(clipDurMs(r), after[0].startMs - prevEnd);
+    if (shift <= 0) continue;
+    const ids = new Set(after.map((c) => c.id));
+    out = out.map((c) => (ids.has(c.id) ? { ...c, startMs: c.startMs - shift } : c));
+  }
+  return out;
+}
+
+/** Melhor início pra encaixar um clipe de `dur` ms perto de `desired` numa
+ *  trilha: considera todos os buracos e devolve a posição válida mais
+ *  próxima do desejado (soltar arquivo na trilha cai onde o usuário mirou). */
+export function bestGapStart(
+  clips: Clip[],
+  group: "video" | "audio",
+  track: number,
+  desiredMs: number,
+  durMs: number,
+): number {
+  const seq = trackClips(clips, group, track);
+  const gaps: [number, number][] = [];
+  let cursor = 0;
+  for (const c of seq) {
+    if (c.startMs - cursor >= durMs) gaps.push([cursor, c.startMs - durMs]);
+    cursor = Math.max(cursor, clipEndMs(c));
+  }
+  gaps.push([cursor, Number.MAX_SAFE_INTEGER]);
+  let best = cursor;
+  let bestDist = Infinity;
+  for (const [lo, hi] of gaps) {
+    const cand = Math.max(lo, Math.min(desiredMs, hi));
+    const dist = Math.abs(cand - desiredMs);
+    if (dist < bestDist) {
+      bestDist = dist;
+      best = cand;
+    }
+  }
+  return best;
 }
 
 /** Encosta value no alvo mais próximo dentro da tolerância (snap). */

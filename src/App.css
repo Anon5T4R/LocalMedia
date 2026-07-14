@@ -799,9 +799,40 @@ input[type="radio"] {
   border-radius: 10px;
   overflow: hidden;
 }
-.preview-layer {
+.layer-box {
   position: absolute;
   display: block;
+}
+.layer-box > img,
+.layer-box > video {
+  display: block;
+  width: 100%;
+  pointer-events: none;
+}
+.layer-box.selected > img,
+.layer-box.selected > video,
+.layer-box.selected > .preview-text {
+  outline: 1.5px dashed rgba(255, 255, 255, 0.75);
+}
+/* Camada em tela cheia mantém o "contain" do export. */
+.layer-box[style*="inset"] > video,
+.layer-box[style*="inset"] > img {
+  height: 100%;
+  object-fit: contain;
+}
+.layer-box.draggable {
+  cursor: move;
+}
+.layer-resize {
+  position: absolute;
+  right: -7px;
+  bottom: -7px;
+  width: 14px;
+  height: 14px;
+  border-radius: 4px;
+  background: var(--accent);
+  border: 2px solid #fff;
+  cursor: nwse-resize;
 }
 .preview-empty {
   position: absolute;
@@ -909,13 +940,75 @@ input[type="radio"] {
   margin: 0;
 }
 
-.tl {
+.tl2 {
   flex: 1;
   min-height: 140px;
-  overflow: auto;
+  display: flex;
   border: 1px solid var(--border);
   border-radius: 10px;
   background: var(--surface);
+  overflow: hidden;
+}
+.tl2-heads-clip {
+  flex: 0 0 96px;
+  overflow: hidden;
+  border-right: 1px solid var(--border);
+  background: var(--surface-2);
+}
+.tl2-head-ruler {
+  height: 26px;
+  border-bottom: 1px solid var(--border);
+}
+.tl2-head {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 6px;
+  border-bottom: 1px solid var(--border);
+}
+.tl2-head-name {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-dim);
+  min-width: 20px;
+}
+.tl2-tbtn {
+  width: 22px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-faint);
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+.tl2-tbtn:hover {
+  color: var(--text);
+}
+.tl2-tbtn.off {
+  opacity: 0.75;
+}
+.tl2-tbtn.active-m {
+  background: var(--danger);
+  border-color: var(--danger);
+  color: #fff;
+}
+.tl2-tbtn.active-s {
+  background: #eab308;
+  border-color: #eab308;
+  color: #1c1917;
+}
+
+.tl {
+  flex: 1;
+  min-width: 0;
+  overflow: auto;
+}
+.tl-row.dimmed .tl-clip {
+  opacity: 0.35;
 }
 .tl-inner {
   min-width: 100%;

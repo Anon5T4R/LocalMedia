@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
 import BatchModal from "./components/BatchModal";
 import EditorView from "./components/editor/EditorView";
+import { resolveDropTarget } from "./components/editor/Timeline";
 import HomeView from "./components/HomeView";
 import TaskModal from "./components/TaskModal";
 import Toasts from "./components/Toasts";
@@ -60,8 +61,16 @@ export default function App() {
             toast("error", "Nenhum arquivo de mídia reconhecido nos itens soltos.");
             return;
           }
-          if (inEditor) void useEditor.getState().addMediaPaths(media);
-          else void addPaths(media);
+          if (inEditor) {
+            // Mira trilha/tempo pela posição do drop (coordenadas físicas →
+            // CSS) — soltar a música na faixa A2 cai na A2, como num NLE.
+            const pos = event.payload.position;
+            const scale = window.devicePixelRatio || 1;
+            const target = pos ? resolveDropTarget(pos.x / scale, pos.y / scale) : null;
+            void useEditor.getState().addMediaPathsAt(media, target ?? undefined);
+          } else {
+            void addPaths(media);
+          }
         }
       })
       .then((fn) => {

@@ -28,12 +28,22 @@ Parte da suíte **Local/Taylor** de aplicativos offline-first. Instale pelo
 
 ## Editor (timeline multi-faixa)
 
-A aba **Editor** monta um projeto com vídeos, imagens e áudios juntos:
+A aba **Editor** monta um projeto com vídeos, imagens e áudios juntos, com o jeito de
+usar dos editores profissionais:
 
 - **Trilhas de vídeo em camadas** (V1 embaixo, V2+ por cima): marca-d'água,
-  picture-in-picture e sobreposições, com posição e tamanho livres.
+  picture-in-picture e sobreposições — **arraste a camada direto no preview** pra
+  posicionar e redimensione pela alça.
 - **Faixas extras de áudio** (A1–A4): música de fundo, narração etc., cada clipe com o
   próprio volume e mudo.
+- **Cabeçalhos de trilha**: ocultar camada de vídeo (👁) e **M**udo/**S**olo por faixa de
+  áudio — valem no preview e na exportação.
+- **Soltar arquivo na trilha certa**: o drag & drop mira trilha e tempo (solte a música
+  na A2 aos 0:30 e é lá que ela entra). Sem mirar, os padrões são espertos: imagem com
+  vídeo presente vira camada por cima no cursor; música nova cai numa faixa livre em
+  cima do som do vídeo.
+- **Ripple delete** (Shift+Delete): remove o clipe e fecha o buraco da montagem;
+  copiar/colar no cursor (Ctrl+C/V).
 - **Vídeo com som entra como par vinculado** (🔗 V+A): dá pra **desvincular** e cortar,
   dividir ou apagar um trecho **só do áudio ou só do vídeo**.
 - **Imagens** (PNG/JPEG/WebP/BMP) viram clipes de duração livre.
@@ -41,8 +51,8 @@ A aba **Editor** monta um projeto com vídeos, imagens e áudios juntos:
 - Por clipe: **velocidade** (0.25×–4×, com áudio corrigido), **fade in/out**,
   **opacidade**, **rotação** e **espelhar**.
 - Timeline com arrastar, aparar pelas bordas, dividir no cursor (S), duplicar (Ctrl+D),
-  snap, zoom (Ctrl+roda), desfazer/refazer, miniaturas nos clipes e preview com
-  play/scrub (setas movem o cursor).
+  snap (🧲 liga/desliga), zoom (Ctrl+roda, ⤢ ajusta ao projeto), desfazer/refazer,
+  miniaturas nos clipes e preview com play/scrub (setas movem o cursor; Home/End).
 - **Projeto salva e abre** (.json) e um rascunho automático segura a timeline se o app
   fechar.
 - **Exportar** gera um MP4 (H.264/AAC, qualidade selecionável) pela fila normal, com

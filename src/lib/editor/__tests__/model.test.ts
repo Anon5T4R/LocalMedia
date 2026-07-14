@@ -1,14 +1,18 @@
 import { describe, expect, it } from "vitest";
 import {
   CLIP_DEFAULTS,
+  audibleAudioTracks,
+  bestGapStart,
   clipDurMs,
   clipEndMs,
   moveClip,
   projectDurMs,
+  rippleDelete,
   setClipSpeed,
   snapMs,
   splitClip,
   trimClip,
+  visibleClips,
   type Clip,
 } from "../model";
 
@@ -162,6 +166,80 @@ describe("velocidade", () => {
     const [l, r] = splitClip([a], "c1", 3000, "c1b");
     expect([l.fadeInMs, l.fadeOutMs]).toEqual([500, 0]);
     expect([r.fadeInMs, r.fadeOutMs]).toEqual([0, 700]);
+  });
+});
+
+describe("trilhas (ocultar/mudo/solo)", () => {
+  it("solo silencia as outras faixas; sem solo vale o mudo", () => {
+    expect([...audibleAudioTracks([{ muted: false, solo: false }, { muted: true, solo: false }])]).toEqual([0]);
+    expect([...audibleAudioTracks([{ muted: false, solo: false }, { muted: false, solo: true }])]).toEqual([1]);
+    // Mudo + solo na mesma faixa: solo vence (comportamento de NLE).
+    expect([...audibleAudioTracks([{ muted: true, solo: true }, { muted: false, solo: false }])]).toEqual([0]);
+  });
+
+  it("visibleClips tira trilha de vídeo oculta e áudio inaudível", () => {
+    const v0 = mkClip({ id: "v0" });
+    const v1 = mkClip({ id: "v1", track: 1 });
+    const a0 = mkClip({ id: "a0", kind: "audio" });
+    const a1 = mkClip({ id: "a1", kind: "audio", track: 1 });
+    const out = visibleClips(
+      [v0, v1, a0, a1],
+      [{ hidden: false }, { hidden: true }],
+      [{ muted: true, solo: false }, { muted: false, solo: false }],
+    );
+    expect(out.map((c) => c.id)).toEqual(["v0", "a1"]);
+  });
+});
+
+describe("rippleDelete", () => {
+  it("remove o par vinculado e fecha o buraco nas duas trilhas", () => {
+    const v1 = mkClip({ id: "v1", outMs: 4000, linkId: "L1" });
+    const a1 = mkClip({ id: "a1", kind: "audio", outMs: 4000, linkId: "L1" });
+    const v2 = mkClip({ id: "v2", startMs: 4000, outMs: 6000 });
+    const a2 = mkClip({ id: "a2", kind: "audio", startMs: 4000, outMs: 6000 });
+    const out = rippleDelete([v1, a1, v2, a2], "v1");
+    expect(out).toHaveLength(2);
+    expect(out.find((c) => c.id === "v2")?.startMs).toBe(0);
+    expect(out.find((c) => c.id === "a2")?.startMs).toBe(0);
+  });
+
+  it("não engole clipe anterior quando já havia gap antes do removido", () => {
+    const a = mkClip({ id: "a", startMs: 0, outMs: 2000 });
+    const b = mkClip({ id: "b", startMs: 5000, outMs: 3000 }); // gap 2000–5000
+    const c = mkClip({ id: "c", startMs: 8000, outMs: 2000 });
+    const out = rippleDelete([a, b, c], "b");
+    // c só pode recuar até encostar em a (fim 2000): shift limitado a 3000? Não —
+    // shift = min(dur 3000, espaço 8000-2000=6000) = 3000 → c vai pra 5000.
+    expect(out.find((x) => x.id === "c")?.startMs).toBe(5000);
+  });
+
+  it("não mexe nas outras trilhas", () => {
+    const v1 = mkClip({ id: "v1", outMs: 4000 });
+    const v2 = mkClip({ id: "v2", startMs: 4000, outMs: 6000 });
+    const pip = mkClip({ id: "pip", track: 1, startMs: 6000, outMs: 2000 });
+    const out = rippleDelete([v1, v2, pip], "v1");
+    expect(out.find((c) => c.id === "v2")?.startMs).toBe(0);
+    expect(out.find((c) => c.id === "pip")?.startMs).toBe(6000);
+  });
+});
+
+describe("bestGapStart", () => {
+  it("cai onde o usuário mirou quando o espaço está livre", () => {
+    const a = mkClip({ id: "a", startMs: 0, outMs: 2000 });
+    expect(bestGapStart([a], "video", 0, 5000, 3000)).toBe(5000);
+  });
+
+  it("encosta no buraco válido mais próximo quando o alvo está ocupado", () => {
+    const a = mkClip({ id: "a", startMs: 0, outMs: 4000 });
+    const b = mkClip({ id: "b", startMs: 6000, outMs: 4000 }); // buraco 4000–6000
+    // Mirar dentro de `a` com um clipe de 2s → encaixa no buraco 4000–6000.
+    expect(bestGapStart([a, b], "video", 0, 2500, 2000)).toBe(4000);
+    // Clipe de 3s não cabe no buraco → vai pro fim (10000).
+    expect(bestGapStart([a, b], "video", 0, 2500, 3000)).toBe(10_000);
+  });
+
+  it("trilha vazia usa o alvo direto", () => {
+    expect(bestGapStart([], "audio", 2, 1234, 5000)).toBe(1234);
   });
 });
 

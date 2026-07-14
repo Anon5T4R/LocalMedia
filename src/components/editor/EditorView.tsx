@@ -1,6 +1,8 @@
 // Tela do editor: preview + propriedades em cima, barra de ferramentas e
 // timeline embaixo. Atalhos: espaço = play/pause, S = dividir, Delete =
-// remover, Ctrl+Z / Ctrl+Shift+Z (ou Ctrl+Y) = desfazer/refazer.
+// remover, Shift+Delete = remover e fechar buraco (ripple), Ctrl+C/V =
+// copiar/colar no cursor, Ctrl+D = duplicar, ←/→ = mover cursor (Shift = 1s),
+// Home/End = início/fim, Ctrl+Z / Ctrl+Shift+Z (ou Ctrl+Y) = desfazer/refazer.
 
 import { useEffect } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
@@ -16,9 +18,10 @@ export default function EditorView() {
   const clips = useEditor((s) => s.clips);
   const playing = useEditor((s) => s.playing);
   const playheadMs = useEditor((s) => s.playheadMs);
-  const videoTracks = useEditor((s) => s.videoTracks);
-  const audioTracks = useEditor((s) => s.audioTracks);
+  const vTracks = useEditor((s) => s.vTracks);
+  const aTracks = useEditor((s) => s.aTracks);
   const pxPerSec = useEditor((s) => s.pxPerSec);
+  const snapOn = useEditor((s) => s.snapOn);
   const undoStack = useEditor((s) => s.undoStack);
   const redoStack = useEditor((s) => s.redoStack);
 
@@ -31,7 +34,9 @@ export default function EditorView() {
     undo,
     redo,
     setZoom,
+    toggleSnap,
     addTrack,
+    removeTrack,
     clearProject,
     exportProject,
     saveProjectAs,
@@ -52,6 +57,12 @@ export default function EditorView() {
     void addMediaPaths(Array.isArray(picked) ? picked : [picked]);
   }
 
+  function zoomFit() {
+    const viewPx = Math.max(300, window.innerWidth - 420);
+    const secs = Math.max(1, projectDurMs(useEditor.getState().clips) / 1000);
+    setZoom(viewPx / secs);
+  }
+
   // Atalhos de teclado (ignorando campos de texto).
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -61,6 +72,8 @@ export default function EditorView() {
       if (e.code === "Space") {
         e.preventDefault();
         s.setPlaying(!s.playing);
+      } else if ((e.key === "Delete" || e.key === "Backspace") && e.shiftKey) {
+        s.rippleRemoveSelected();
       } else if (e.key === "Delete" || e.key === "Backspace") {
         s.removeSelected();
       } else if (e.key.toLowerCase() === "s" && !e.ctrlKey) {
@@ -70,6 +83,18 @@ export default function EditorView() {
         const step = (e.shiftKey ? 1000 : 100) * (e.key === "ArrowLeft" ? -1 : 1);
         s.setPlaying(false);
         s.setPlayhead(s.playheadMs + step);
+      } else if (e.key === "Home") {
+        e.preventDefault();
+        s.setPlaying(false);
+        s.setPlayhead(0);
+      } else if (e.key === "End") {
+        e.preventDefault();
+        s.setPlaying(false);
+        s.setPlayhead(projectDurMs(s.clips));
+      } else if (e.ctrlKey && e.key.toLowerCase() === "c") {
+        s.copySelected();
+      } else if (e.ctrlKey && e.key.toLowerCase() === "v") {
+        s.pasteAtPlayhead();
       } else if (e.ctrlKey && e.key.toLowerCase() === "d") {
         e.preventDefault();
         s.duplicateSelected();
@@ -114,7 +139,7 @@ export default function EditorView() {
         <button className="btn small" onClick={splitAtPlayhead} title="S — divide o clipe selecionado no cursor">
           ✂ Dividir
         </button>
-        <button className="btn small" onClick={removeSelected} title="Delete">
+        <button className="btn small" onClick={removeSelected} title="Delete (Shift+Delete fecha o buraco)">
           🗑
         </button>
         <button className="btn small" onClick={undo} disabled={undoStack.length === 0} title="Ctrl+Z">
@@ -124,18 +149,34 @@ export default function EditorView() {
           ↪
         </button>
         <span className="toolbar-sep" />
-        <button className="btn small" onClick={() => addTrack("video")} disabled={videoTracks >= 4}>
+        <button className="btn small" onClick={() => addTrack("video")} disabled={vTracks.length >= 4} title="Nova camada de vídeo (V2+ fica por cima)">
           ＋ Camada
         </button>
-        <button className="btn small" onClick={() => addTrack("audio")} disabled={audioTracks >= 4}>
+        <button className="btn small" onClick={() => removeTrack("video")} disabled={vTracks.length <= 1} title="Remove a camada de cima (se vazia)">
+          −
+        </button>
+        <button className="btn small" onClick={() => addTrack("audio")} disabled={aTracks.length >= 4} title="Nova faixa de áudio">
           ＋ Faixa de áudio
         </button>
+        <button className="btn small" onClick={() => removeTrack("audio")} disabled={aTracks.length <= 1} title="Remove a faixa de cima (se vazia)">
+          −
+        </button>
         <span className="toolbar-sep" />
+        <button
+          className={`btn small ${snapOn ? "primary" : ""}`}
+          onClick={toggleSnap}
+          title="Snap: os clipes grudam nas bordas vizinhas e no cursor"
+        >
+          🧲
+        </button>
         <button className="btn small" onClick={() => setZoom(pxPerSec * 0.8)} title="Ctrl+roda também dá zoom">
           −
         </button>
         <button className="btn small" onClick={() => setZoom(pxPerSec * 1.25)}>
           ＋
+        </button>
+        <button className="btn small" onClick={zoomFit} disabled={clips.length === 0} title="Ajustar o zoom pro projeto inteiro">
+          ⤢
         </button>
         <span className="toolbar-spacer" />
         <button className="btn small" onClick={() => void openProjectFile()} title="Abrir projeto salvo (.json)">
@@ -161,9 +202,11 @@ export default function EditorView() {
         <div className="editor-empty" onClick={() => void pickMedia()}>
           <div className="drop-icon">🎞️</div>
           <p>
-            Arraste vídeos, áudios e imagens pra cá (ou clique). Vídeo com som entra como um
-            par vinculado — desvincule pra recortar só o áudio ou só o vídeo. Camadas de
-            vídeo (V2+) ficam por cima, como marca-d'água ou picture-in-picture.
+            Arraste vídeos, áudios e imagens pra cá — dá pra soltar direto na trilha e no
+            tempo certos. Vídeo com som entra como um par vinculado (desvincule pra recortar
+            só o áudio ou só o vídeo); imagem com vídeo presente vira camada por cima
+            (arraste-a no preview pra posicionar); música nova cai numa faixa livre em cima
+            do som do vídeo.
           </p>
         </div>
       ) : (
