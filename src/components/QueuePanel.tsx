@@ -1,13 +1,14 @@
 import { revealItemInDir } from "@tauri-apps/plugin-opener";
+import { t, type MessageKey } from "../lib/i18n";
 import type { JobStatus } from "../lib/types";
 import { useStore } from "../state/store";
 
-const STATUS_LABEL: Record<JobStatus, string> = {
-  waiting: "na fila",
-  running: "processando",
-  done: "pronto",
-  error: "erro",
-  cancelled: "cancelado",
+const STATUS_LABEL: Record<JobStatus, MessageKey> = {
+  waiting: "queue.status.waiting",
+  running: "queue.status.running",
+  done: "queue.status.done",
+  error: "queue.status.error",
+  cancelled: "queue.status.cancelled",
 };
 
 export default function QueuePanel() {
@@ -21,10 +22,10 @@ export default function QueuePanel() {
   return (
     <div className="queue-panel">
       <div className="queue-head">
-        <h2>Fila</h2>
+        <h2>{t("queue.title")}</h2>
         {hasFinished && (
           <button className="btn ghost small" onClick={clearFinishedJobs}>
-            Limpar concluídos
+            {t("queue.clearFinished")}
           </button>
         )}
       </div>
@@ -35,10 +36,10 @@ export default function QueuePanel() {
               {j.label} → {j.outPath.replace(/\\/g, "/").split("/").pop()}
             </div>
             <div className="queue-item-status">
-              {STATUS_LABEL[j.status]}
+              {t(STATUS_LABEL[j.status])}
               {j.status === "running" &&
                 ` — ${j.pct}%${j.speed ? ` (${j.speed})` : ""}${
-                  j.steps.length > 1 ? ` · passo ${j.step + 1}/${j.steps.length}` : ""
+                  j.steps.length > 1 ? ` · ${t("queue.step", { step: j.step + 1, total: j.steps.length })}` : ""
                 }`}
               {j.error ? ` — ${j.error}` : ""}
             </div>
@@ -54,12 +55,12 @@ export default function QueuePanel() {
                 className="btn small"
                 onClick={() => void revealItemInDir(j.outPath).catch(() => {})}
               >
-                Mostrar na pasta
+                {t("queue.showInFolder")}
               </button>
             )}
             {(j.status === "waiting" || j.status === "running") && (
               <button className="btn small" onClick={() => cancelJob(j.id)}>
-                Cancelar
+                {t("common.cancel")}
               </button>
             )}
           </div>

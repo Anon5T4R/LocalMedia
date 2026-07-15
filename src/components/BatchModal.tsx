@@ -3,6 +3,7 @@
 
 import { useState } from "react";
 import * as be from "../lib/backend";
+import { t } from "../lib/i18n";
 import { buildConvert, PRESETS, type PresetId } from "../lib/presets";
 import { suggestOut, useStore } from "../state/store";
 import { useUi } from "../state/ui";
@@ -23,12 +24,12 @@ export default function BatchModal() {
 
   async function run() {
     if (chosen.length === 0) {
-      toast("error", "Escolha ao menos um arquivo.");
+      toast("error", t("batch.selectOne"));
       return;
     }
     for (const f of chosen) {
       if (!f.info.video && !presetDef?.audioOnly) {
-        toast("info", `${f.info.name}: sem vídeo, pulado.`);
+        toast("info", t("batch.skipNoVideo", { name: f.info.name }));
         continue;
       }
       const built = buildConvert(f.info, preset);
@@ -36,25 +37,23 @@ export default function BatchModal() {
       enqueue(built, out);
     }
     setOpen(false);
-    toast("success", `${chosen.length} arquivo(s) na fila.`);
+    toast("success", t("batch.queued", { n: chosen.length }));
   }
 
   return (
     <div className="modal-backdrop" onClick={() => setOpen(false)}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-head">
-          <h2>Converter em lote</h2>
+          <h2>{t("batch.title")}</h2>
           <button className="icon-btn" onClick={() => setOpen(false)}>
             ✕
           </button>
         </div>
-        <p className="card-hint">
-          Aplica o mesmo preset em vários arquivos. A saída fica ao lado de cada original.
-        </p>
+        <p className="card-hint">{t("batch.hint")}</p>
         <select value={preset} onChange={(e) => setPreset(e.target.value as PresetId)}>
           {PRESETS.map((p) => (
             <option key={p.id} value={p.id}>
-              {p.label}
+              {t(p.label)}
             </option>
           ))}
         </select>
@@ -72,7 +71,7 @@ export default function BatchModal() {
         </div>
         <div className="tab-foot">
           <button className="btn primary" onClick={() => void run()}>
-            Converter {chosen.length} arquivo(s)
+            {t("batch.convertBtn", { n: chosen.length })}
           </button>
         </div>
       </div>

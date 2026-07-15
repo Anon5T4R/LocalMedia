@@ -9,6 +9,7 @@
  *  mistura num `amix`. Imagens entram com `-loop 1 -t`. */
 
 import type { BuiltJob } from "../presets";
+import { t as tr } from "../i18n";
 import {
   clipDurMs,
   clipEndMs,
@@ -244,7 +245,7 @@ export function buildTimelineExport(
   ];
 
   return {
-    label: "Exportar projeto",
+    label: tr("editor.exportTitle"),
     ext: hasVideo ? "mp4" : "m4a",
     suffix: "editado",
     denomMs: durMs,

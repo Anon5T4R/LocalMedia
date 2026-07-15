@@ -8,6 +8,7 @@ import TaskModal from "./components/TaskModal";
 import Toasts from "./components/Toasts";
 import TopBar from "./components/TopBar";
 import { inTauri } from "./lib/backend";
+import { t } from "./lib/i18n";
 import { IMAGE_EXTENSIONS, MEDIA_EXTENSIONS } from "./lib/types";
 import { useEditor } from "./state/editor";
 import { useStore } from "./state/store";
@@ -58,7 +59,7 @@ export default function App() {
             return accepted.includes(ext);
           });
           if (media.length === 0 && paths.length > 0) {
-            toast("error", "Nenhum arquivo de mídia reconhecido nos itens soltos.");
+            toast("error", t("app.dropNothing"));
             return;
           }
           if (inEditor) {
@@ -89,7 +90,7 @@ export default function App() {
       </main>
       {dragging && (
         <div className="drop-overlay">
-          <div className="drop-overlay-inner">Solte os arquivos aqui</div>
+          <div className="drop-overlay-inner">{t("app.dropHere")}</div>
         </div>
       )}
       <TaskModal />

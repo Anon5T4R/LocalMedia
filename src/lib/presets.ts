@@ -4,6 +4,7 @@
  *  troca de codec usa `-c copy` (instantâneo, sem re-encode). */
 
 import { escDrawtext } from "./editor/render";
+import { t as tr, type MessageKey } from "./i18n";
 import type { MediaInfo } from "./types";
 
 export interface BuiltJob {
@@ -39,34 +40,15 @@ export type PresetId =
   | "opus"
   | "wav-voz";
 
-export const PRESETS: { id: PresetId; label: string; hint: string; audioOnly: boolean }[] = [
-  {
-    id: "mp4-web",
-    label: "Vídeo pra web (MP4/H.264)",
-    hint: "compatível com tudo, começa a tocar antes de baixar inteiro",
-    audioOnly: false,
-  },
-  {
-    id: "whatsapp",
-    label: "Compatível com WhatsApp",
-    hint: "MP4 H.264 até 1280px, arquivo pequeno",
-    audioOnly: false,
-  },
-  { id: "webm", label: "WebM (VP9)", hint: "aberto, ótimo pra web moderna", audioOnly: false },
-  {
-    id: "mkv-copy",
-    label: "Trocar container pra MKV (sem recodificar)",
-    hint: "instantâneo — só re-empacota os streams",
-    audioOnly: false,
-  },
-  { id: "mp3", label: "Só o áudio (MP3)", hint: "universal", audioOnly: true },
-  { id: "opus", label: "Só o áudio (Opus)", hint: "melhor qualidade por MB", audioOnly: true },
-  {
-    id: "wav-voz",
-    label: "Áudio pra transcrição (WAV 16 kHz mono)",
-    hint: "o formato que o LocalScribe usa",
-    audioOnly: true,
-  },
+// label/hint são CHAVES de i18n (o componente chama t()) — assim são reativas à troca de idioma.
+export const PRESETS: { id: PresetId; label: MessageKey; hint: MessageKey; audioOnly: boolean }[] = [
+  { id: "mp4-web", label: "preset.mp4web.label", hint: "preset.mp4web.hint", audioOnly: false },
+  { id: "whatsapp", label: "preset.whatsapp.label", hint: "preset.whatsapp.hint", audioOnly: false },
+  { id: "webm", label: "preset.webm.label", hint: "preset.webm.hint", audioOnly: false },
+  { id: "mkv-copy", label: "preset.mkvcopy.label", hint: "preset.mkvcopy.hint", audioOnly: false },
+  { id: "mp3", label: "preset.mp3.label", hint: "preset.mp3.hint", audioOnly: true },
+  { id: "opus", label: "preset.opus.label", hint: "preset.opus.hint", audioOnly: true },
+  { id: "wav-voz", label: "preset.wavvoz.label", hint: "preset.wavvoz.hint", audioOnly: true },
 ];
 
 export function buildConvert(info: MediaInfo, preset: PresetId): BuiltJob {
@@ -75,7 +57,7 @@ export function buildConvert(info: MediaInfo, preset: PresetId): BuiltJob {
   switch (preset) {
     case "mp4-web":
       return {
-        label: "Converter → MP4 web",
+        label: tr("job.convertMp4"),
         ext: "mp4",
         suffix: "web",
         denomMs: d,
@@ -91,7 +73,7 @@ export function buildConvert(info: MediaInfo, preset: PresetId): BuiltJob {
       };
     case "whatsapp":
       return {
-        label: "Converter → WhatsApp",
+        label: tr("job.convertWhatsapp"),
         ext: "mp4",
         suffix: "whatsapp",
         denomMs: d,
@@ -108,7 +90,7 @@ export function buildConvert(info: MediaInfo, preset: PresetId): BuiltJob {
       };
     case "webm":
       return {
-        label: "Converter → WebM",
+        label: tr("job.convertWebm"),
         ext: "webm",
         suffix: "webm",
         denomMs: d,
@@ -123,7 +105,7 @@ export function buildConvert(info: MediaInfo, preset: PresetId): BuiltJob {
       };
     case "mkv-copy":
       return {
-        label: "Re-empacotar → MKV",
+        label: tr("job.remuxMkv"),
         ext: "mkv",
         suffix: "mkv",
         denomMs: d,
@@ -131,7 +113,7 @@ export function buildConvert(info: MediaInfo, preset: PresetId): BuiltJob {
       };
     case "mp3":
       return {
-        label: "Extrair áudio → MP3",
+        label: tr("job.extractMp3"),
         ext: "mp3",
         suffix: "audio",
         denomMs: d,
@@ -139,7 +121,7 @@ export function buildConvert(info: MediaInfo, preset: PresetId): BuiltJob {
       };
     case "opus":
       return {
-        label: "Extrair áudio → Opus",
+        label: tr("job.extractOpus"),
         ext: "opus",
         suffix: "audio",
         denomMs: d,
@@ -147,7 +129,7 @@ export function buildConvert(info: MediaInfo, preset: PresetId): BuiltJob {
       };
     case "wav-voz":
       return {
-        label: "Áudio pra transcrição",
+        label: tr("job.audioTranscribe"),
         ext: "wav",
         suffix: "16khz",
         denomMs: d,
@@ -161,7 +143,7 @@ export function buildConvert(info: MediaInfo, preset: PresetId): BuiltJob {
 export function buildCompress(info: MediaInfo, crf: number): BuiltJob {
   const c = Math.min(34, Math.max(18, Math.round(crf)));
   return {
-    label: `Comprimir (CRF ${c})`,
+    label: tr("job.compress", { c }),
     ext: "mp4",
     suffix: `crf${c}`,
     denomMs: info.durationMs,
@@ -196,7 +178,7 @@ export function buildCut(
   const seek = ["-ss", ffTime(startMs), "-i", info.path, "-t", ffTime(dur)];
   if (copy) {
     return {
-      label: "Cortar (sem recodificar)",
+      label: tr("job.cutCopy"),
       ext: info.container || "mp4",
       suffix: "corte",
       denomMs: dur,
@@ -204,7 +186,7 @@ export function buildCut(
     };
   }
   return {
-    label: "Cortar (recodificando)",
+    label: tr("job.cutRecode"),
     ext: "mp4",
     suffix: "corte",
     denomMs: dur,
@@ -234,7 +216,7 @@ export function buildGif(
   const seek = ["-ss", ffTime(startMs), "-t", ffTime(dur), "-i", info.path];
   const filters = `fps=${fps},scale=${width}:-1:flags=lanczos`;
   return {
-    label: "Gerar GIF",
+    label: tr("job.gif"),
     ext: "gif",
     suffix: "gif",
     denomMs: dur * 2,
@@ -253,7 +235,7 @@ export function buildGif(
 
 export function buildConcat(listPath: string, container: string, totalMs: number): BuiltJob {
   return {
-    label: "Juntar clipes",
+    label: tr("job.concat"),
     ext: container,
     suffix: "juntado",
     denomMs: totalMs,
@@ -277,7 +259,7 @@ export function concatCompatible(files: MediaInfo[]): boolean {
 
 export function buildResize(info: MediaInfo, width: number): BuiltJob {
   return {
-    label: `Redimensionar → ${width}px`,
+    label: tr("job.resize", { w: width }),
     ext: "mp4",
     suffix: `${width}px`,
     denomMs: info.durationMs,
@@ -300,7 +282,7 @@ export function buildRotate(info: MediaInfo, rotation: Rotation): BuiltJob {
   const vf =
     rotation === 90 ? "transpose=1" : rotation === 270 ? "transpose=2" : "transpose=1,transpose=1";
   return {
-    label: `Rotacionar ${rotation}°`,
+    label: tr("job.rotate", { r: rotation }),
     ext: "mp4",
     suffix: `rot${rotation}`,
     denomMs: info.durationMs,
@@ -328,7 +310,7 @@ export function buildLoudnorm(info: MediaInfo): BuiltJob {
       ]
     : ["-i", info.path, "-af", "loudnorm=I=-16:TP=-1.5:LRA=11", "-c:a", "libmp3lame", "-q:a", "2"];
   return {
-    label: "Normalizar volume",
+    label: tr("job.loudnorm"),
     ext: hasVideo ? (info.container === "mkv" ? "mkv" : "mp4") : "mp3",
     suffix: "volume",
     denomMs: info.durationMs,
@@ -353,7 +335,7 @@ export function buildBurnSubs(info: MediaInfo, source: SubSource, fontSize: numb
   if (fontSize > 0) vf += `:force_style=Fontsize=${fontSize}`;
   const container = info.container === "mkv" ? "mkv" : "mp4";
   return {
-    label: "Queimar legenda",
+    label: tr("job.burnSubs"),
     ext: container,
     suffix: "legendado",
     denomMs: info.durationMs,
@@ -378,7 +360,7 @@ export function buildMuxSubs(info: MediaInfo, subPath: string): BuiltJob {
   const mp4 = ["mp4", "m4v", "mov"].includes(info.container);
   const container = mp4 ? "mp4" : "mkv";
   return {
-    label: "Anexar legenda",
+    label: tr("job.muxSubs"),
     ext: container,
     suffix: "legendado",
     denomMs: info.durationMs,
@@ -414,7 +396,7 @@ export function buildTracks(
     args.push("-sn");
   }
   return {
-    label: "Ajustar faixas",
+    label: tr("job.tracks"),
     ext: container,
     suffix: "faixas",
     denomMs: info.durationMs,

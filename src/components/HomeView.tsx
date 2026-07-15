@@ -1,5 +1,6 @@
 import { open, save } from "@tauri-apps/plugin-dialog";
 import * as be from "../lib/backend";
+import { t } from "../lib/i18n";
 import { buildConcat, concatCompatible } from "../lib/presets";
 import { MEDIA_EXTENSIONS } from "../lib/types";
 import { useEditor } from "../state/editor";
@@ -23,8 +24,8 @@ export default function HomeView() {
   async function pickFiles() {
     const picked = await open({
       multiple: true,
-      title: "Abrir mídia",
-      filters: [{ name: "Vídeo e áudio", extensions: MEDIA_EXTENSIONS }],
+      title: t("topbar.openMedia"),
+      filters: [{ name: t("topbar.filterVideoAudio"), extensions: MEDIA_EXTENSIONS }],
     }).catch(() => null);
     if (!picked) return;
     void addPaths(Array.isArray(picked) ? picked : [picked]);
@@ -33,17 +34,13 @@ export default function HomeView() {
   async function joinSelected() {
     const infos = selected.map((f) => f.info);
     if (!concatCompatible(infos)) {
-      toast(
-        "error",
-        "Pra juntar sem recodificar, os clipes precisam ter o mesmo formato e codecs. " +
-          "Converta todos pro mesmo preset primeiro (ex.: MP4 web) e junte de novo.",
-      );
+      toast("error", t("home.concatIncompatible"));
       return;
     }
     const totalMs = infos.reduce((acc, i) => acc + i.durationMs, 0);
     const container = infos[0].container;
     const out = await save({
-      title: "Salvar vídeo juntado",
+      title: t("home.saveJoinedTitle"),
       defaultPath: `juntado.${container}`,
       filters: [{ name: container.toUpperCase(), extensions: [container] }],
     }).catch(() => null);
@@ -64,19 +61,17 @@ export default function HomeView() {
     <div className="home">
       {!runtimeOk && (
         <div className="banner warn">
-          Runtime de mídia ausente (ffmpeg). Em desenvolvimento, rode{" "}
-          <code>scripts/fetch-ffmpeg</code>; no app instalado isso não deveria acontecer.
+          {t("home.runtimeMissingPre")}{" "}
+          <code>scripts/fetch-ffmpeg</code>
+          {t("home.runtimeMissingPost")}
         </div>
       )}
 
       {files.length === 0 ? (
         <div className="empty-hero" onClick={pickFiles}>
           <div className="drop-icon">🎬</div>
-          <h1>Converta, comprima e corte vídeo e áudio</h1>
-          <p className="home-sub">
-            Arraste arquivos pra cá (ou clique). Tudo roda na sua máquina com ffmpeg — nada de
-            site de conversão.
-          </p>
+          <h1>{t("home.emptyTitle")}</h1>
+          <p className="home-sub">{t("home.emptySub")}</p>
         </div>
       ) : (
         <>
@@ -86,22 +81,24 @@ export default function HomeView() {
             ))}
             <div className="file-card add-card" onClick={pickFiles}>
               <span className="drop-icon">＋</span>
-              <span>Adicionar mais</span>
+              <span>{t("home.addMore")}</span>
             </div>
           </div>
 
           {selected.length > 0 && (
             <div className="selection-bar">
               <span>
-                {selected.length} selecionado{selected.length > 1 ? "s" : ""}
+                {selected.length > 1
+                  ? t("home.selectedMany", { n: selected.length })
+                  : t("home.selectedOne", { n: selected.length })}
               </span>
               {selected.length >= 2 && (
                 <button className="btn primary small" onClick={() => void joinSelected()}>
-                  Juntar clipes (sem recodificar)
+                  {t("home.joinClips")}
                 </button>
               )}
               <button className="btn small" onClick={() => setBatchOpen(true)}>
-                Converter em lote…
+                {t("home.batchConvert")}
               </button>
               <button
                 className="btn small"
@@ -111,10 +108,10 @@ export default function HomeView() {
                   setView("editor");
                 }}
               >
-                Abrir no editor
+                {t("home.openInEditor")}
               </button>
               <button className="btn ghost small" onClick={clearSelection}>
-                Limpar seleção
+                {t("home.clearSelection")}
               </button>
             </div>
           )}

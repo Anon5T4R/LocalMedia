@@ -22,19 +22,20 @@ import {
   type PresetId,
   type Rotation,
 } from "../lib/presets";
+import { t, type MessageKey } from "../lib/i18n";
 import { fmtBytes } from "../lib/time";
 import { SUBTITLE_EXTENSIONS, type MediaFile } from "../lib/types";
 import { suggestOut, useStore } from "../state/store";
 import { useUi } from "../state/ui";
 
-const TABS: [string, string][] = [
-  ["converter", "Converter"],
-  ["comprimir", "Comprimir"],
-  ["cortar", "Cortar"],
-  ["gif", "GIF"],
-  ["legendas", "Legendas"],
-  ["faixas", "Faixas"],
-  ["ajustes", "Ajustes"],
+const TABS: [string, MessageKey][] = [
+  ["converter", "action.convert"],
+  ["comprimir", "action.compress"],
+  ["cortar", "action.cut"],
+  ["gif", "action.gif"],
+  ["legendas", "action.subs"],
+  ["faixas", "action.tracks"],
+  ["ajustes", "action.adjust"],
 ];
 
 import CutRange from "./CutRange";
@@ -60,7 +61,7 @@ export default function TaskModal() {
     if (!file) return;
     const suggested = suggestOut(file.info.path, built.suffix, built.ext);
     const out = await save({
-      title: "Salvar como",
+      title: t("task.saveAsTitle"),
       defaultPath: suggested,
       filters: [{ name: built.ext.toUpperCase(), extensions: [built.ext] }],
     }).catch(() => null);
@@ -85,7 +86,7 @@ export default function TaskModal() {
               className={`tab ${tab === id ? "active" : ""}`}
               onClick={() => openTask(file.id, id)}
             >
-              {label}
+              {t(label)}
             </button>
           ))}
         </div>
@@ -121,15 +122,15 @@ function ConvertTab({ file, onSubmit }: TabProps) {
               onChange={() => setPreset(p.id)}
             />
             <div>
-              <div className="preset-label">{p.label}</div>
-              <div className="preset-hint">{p.hint}</div>
+              <div className="preset-label">{t(p.label)}</div>
+              <div className="preset-hint">{t(p.hint)}</div>
             </div>
           </label>
         ))}
       </div>
       <div className="tab-foot">
         <button className="btn primary" onClick={() => void onSubmit(buildConvert(file.info, preset))}>
-          Converter…
+          {t("task.convertBtn")}
         </button>
       </div>
     </div>
@@ -141,10 +142,7 @@ function CompressTab({ file, onSubmit }: TabProps) {
   const est = estimateCompress(file.info.sizeBytes, crf);
   return (
     <div className="tab-body">
-      <p className="card-hint">
-        Recomprime em H.264 pelo fator de qualidade (CRF). Menor CRF = mais qualidade e mais
-        tamanho. 23 é praticamente indistinguível; 28 já aperta bem.
-      </p>
+      <p className="card-hint">{t("task.compressHint")}</p>
       <div className="crf-row">
         <span>18</span>
         <input
@@ -158,12 +156,12 @@ function CompressTab({ file, onSubmit }: TabProps) {
         <b className="crf-value">CRF {crf}</b>
       </div>
       <div className="card-hint">
-        Tamanho estimado: <b>{fmtBytes(est)}</b> (estimativa grosseira — o resultado real
-        depende do conteúdo). Original: {fmtBytes(file.info.sizeBytes)}.
+        {t("task.estLabel")} <b>{fmtBytes(est)}</b> {t("task.estNote")} {t("task.original")}:{" "}
+        {fmtBytes(file.info.sizeBytes)}.
       </div>
       <div className="tab-foot">
         <button className="btn primary" onClick={() => void onSubmit(buildCompress(file.info, crf))}>
-          Comprimir…
+          {t("task.compressBtn")}
         </button>
       </div>
     </div>
@@ -185,8 +183,7 @@ function CutTab({ file, onSubmit }: TabProps) {
       <label className="check-row">
         <input type="checkbox" checked={copy} onChange={(e) => setCopy(e.target.checked)} />
         <span>
-          <b>Corte rápido (sem recodificar)</b> — instantâneo e sem perda; o início pode
-          deslizar até o quadro-chave mais próximo. Desmarque pra corte exato (recodifica).
+          <b>{t("task.cutFast")}</b> {t("task.cutFastHint")}
         </span>
       </label>
       <div className="tab-foot">
@@ -194,7 +191,7 @@ function CutTab({ file, onSubmit }: TabProps) {
           className="btn primary"
           onClick={() => void onSubmit(buildCut(file.info, range[0], range[1], copy))}
         >
-          Cortar…
+          {t("task.cutBtn")}
         </button>
       </div>
     </div>
@@ -210,7 +207,7 @@ function GifTab({ file, onSubmit }: TabProps) {
 
   async function submit() {
     if (range[1] - range[0] > 30_000) {
-      toast("error", "GIF de mais de 30 s fica gigante — corte um trecho menor.");
+      toast("error", t("task.gifTooLong"));
       return;
     }
     const palette = await be.tmpPath(`${Date.now().toString(36)}-palette.png`);
@@ -237,7 +234,7 @@ function GifTab({ file, onSubmit }: TabProps) {
           </select>
         </label>
         <label>
-          Largura
+          {t("task.width")}
           <select value={width} onChange={(e) => setWidth(Number(e.target.value))}>
             {[240, 320, 480, 640, 800].map((w) => (
               <option key={w} value={w}>
@@ -246,11 +243,11 @@ function GifTab({ file, onSubmit }: TabProps) {
             ))}
           </select>
         </label>
-        <span className="card-hint">2 passes (paleta otimizada) — cores bem melhores.</span>
+        <span className="card-hint">{t("task.gifHint")}</span>
       </div>
       <div className="tab-foot">
         <button className="btn primary" onClick={() => void submit()}>
-          Gerar GIF…
+          {t("task.gifBtn")}
         </button>
       </div>
     </div>
@@ -270,8 +267,8 @@ function SubsTab({ file, onSubmit }: TabProps) {
   async function pickSub() {
     const picked = await open({
       multiple: false,
-      title: "Escolher arquivo de legenda",
-      filters: [{ name: "Legendas", extensions: SUBTITLE_EXTENSIONS }],
+      title: t("task.subsPickTitle"),
+      filters: [{ name: t("task.subsFilter"), extensions: SUBTITLE_EXTENSIONS }],
     }).catch(() => null);
     if (picked && !Array.isArray(picked)) {
       setSubPath(picked);
@@ -281,7 +278,7 @@ function SubsTab({ file, onSubmit }: TabProps) {
 
   function burn() {
     if (source === "file" && !subPath) {
-      toast("error", "Escolha um arquivo de legenda primeiro.");
+      toast("error", t("task.subsPickFirst"));
       return;
     }
     const src =
@@ -294,14 +291,12 @@ function SubsTab({ file, onSubmit }: TabProps) {
   return (
     <div className="tab-body">
       <p className="card-hint">
-        <b>Queimar</b> grava a legenda nos quadros — aparece em qualquer lugar (WhatsApp,
-        Instagram…), mas recodifica o vídeo. <b>Anexar como faixa</b> é instantâneo e dá pra
-        ligar/desligar no player, só que nem todo app mostra. Dica: o LocalScribe gera o
-        .srt da transcrição.
+        <b>{t("task.subsBurn")}</b> {t("task.subsHint1")} <b>{t("task.subsMux")}</b>{" "}
+        {t("task.subsHint2")}
       </p>
 
       <div className="track-group">
-        <div className="track-title">Origem da legenda</div>
+        <div className="track-title">{t("task.subsSource")}</div>
         <label className="check-row">
           <input
             type="radio"
@@ -310,9 +305,9 @@ function SubsTab({ file, onSubmit }: TabProps) {
             onChange={() => setSource("file")}
           />
           <span>
-            Arquivo (.srt, .vtt, .ass){" "}
+            {t("task.subsFile")}{" "}
             <button className="btn small" onClick={() => void pickSub()}>
-              {subPath ? subName : "Escolher…"}
+              {subPath ? subName : t("task.choose")}
             </button>
           </span>
         </label>
@@ -325,7 +320,7 @@ function SubsTab({ file, onSubmit }: TabProps) {
               onChange={() => setSource("embedded")}
             />
             <span>
-              Embutida no vídeo{" "}
+              {t("task.subsEmbedded")}{" "}
               <select
                 value={embIndex}
                 onChange={(e) => {
@@ -335,7 +330,7 @@ function SubsTab({ file, onSubmit }: TabProps) {
               >
                 {file.info.subs.map((s) => (
                   <option key={s.index} value={s.index}>
-                    Legenda {s.index + 1} {s.lang && `(${s.lang})`} {s.title}
+                    {t("task.subLabelPrefix", { n: s.index + 1 })} {s.lang && `(${s.lang})`} {s.title}
                   </option>
                 ))}
               </select>
@@ -346,26 +341,24 @@ function SubsTab({ file, onSubmit }: TabProps) {
 
       <div className="adjust-row">
         <div>
-          <b>Queimar no vídeo</b>
-          <div className="card-hint">tamanho da letra abaixo; recodifica (H.264)</div>
+          <b>{t("task.subsBurnTitle")}</b>
+          <div className="card-hint">{t("task.subsBurnHint")}</div>
         </div>
         <select value={fontSize} onChange={(e) => setFontSize(Number(e.target.value))}>
-          <option value={0}>Tamanho padrão</option>
-          <option value={18}>Pequena</option>
-          <option value={24}>Média</option>
-          <option value={32}>Grande</option>
+          <option value={0}>{t("task.sizeDefault")}</option>
+          <option value={18}>{t("task.sizeSmall")}</option>
+          <option value={24}>{t("task.sizeMedium")}</option>
+          <option value={32}>{t("task.sizeLarge")}</option>
         </select>
         <button className="btn primary" onClick={burn}>
-          Queimar…
+          {t("task.burnBtn")}
         </button>
       </div>
 
       <div className="adjust-row">
         <div>
-          <b>Anexar como faixa</b>
-          <div className="card-hint">
-            sem recodificar — só pra arquivo externo (a embutida já é uma faixa)
-          </div>
+          <b>{t("task.subsMux")}</b>
+          <div className="card-hint">{t("task.subsMuxHint")}</div>
         </div>
         <span />
         <button
@@ -373,7 +366,7 @@ function SubsTab({ file, onSubmit }: TabProps) {
           disabled={!subPath}
           onClick={() => void onSubmit(buildMuxSubs(file.info, subPath))}
         >
-          Anexar…
+          {t("task.muxBtn")}
         </button>
       </div>
     </div>
@@ -391,13 +384,10 @@ function TracksTab({ file, onSubmit }: TabProps) {
 
   return (
     <div className="tab-body">
-      <p className="card-hint">
-        Escolha o que fica no arquivo (sem recodificar — instantâneo). Útil pra remover
-        áudios dublados ou legendas de um MKV.
-      </p>
+      <p className="card-hint">{t("task.tracksHint")}</p>
       {file.info.audio.length > 0 && (
         <div className="track-group">
-          <div className="track-title">Áudio</div>
+          <div className="track-title">{t("task.audio")}</div>
           {file.info.audio.map((a) => (
             <label key={a.index} className="check-row">
               <input
@@ -406,7 +396,7 @@ function TracksTab({ file, onSubmit }: TabProps) {
                 onChange={() => toggle(audioKeep, setAudioKeep, a.index)}
               />
               <span>
-                Faixa {a.index + 1}: {a.codec} {a.channels}ch{" "}
+                {t("task.trackPrefix", { n: a.index + 1 })} {a.codec} {a.channels}ch{" "}
                 {a.lang && <span className="chip">{a.lang}</span>} {a.title}
               </span>
             </label>
@@ -415,7 +405,7 @@ function TracksTab({ file, onSubmit }: TabProps) {
       )}
       {file.info.subs.length > 0 && (
         <div className="track-group">
-          <div className="track-title">Legendas</div>
+          <div className="track-title">{t("action.subs")}</div>
           {file.info.subs.map((s) => (
             <label key={s.index} className="check-row">
               <input
@@ -424,8 +414,8 @@ function TracksTab({ file, onSubmit }: TabProps) {
                 onChange={() => toggle(subKeep, setSubKeep, s.index)}
               />
               <span>
-                Legenda {s.index + 1}: {s.codec} {s.lang && <span className="chip">{s.lang}</span>}{" "}
-                {s.title}
+                {t("task.subTrackPrefix", { n: s.index + 1 })} {s.codec}{" "}
+                {s.lang && <span className="chip">{s.lang}</span>} {s.title}
               </span>
             </label>
           ))}
@@ -436,13 +426,13 @@ function TracksTab({ file, onSubmit }: TabProps) {
           className="btn primary"
           onClick={() => {
             if (file.info.audio.length > 0 && audioKeep.length === 0 && !file.info.video) {
-              toast("error", "Selecione ao menos uma faixa.");
+              toast("error", t("task.selectOneTrack"));
               return;
             }
             void onSubmit(buildTracks(file.info, audioKeep, subKeep));
           }}
         >
-          Aplicar…
+          {t("common.apply")}
         </button>
       </div>
     </div>
@@ -458,10 +448,12 @@ function AdjustTab({ file, onSubmit }: TabProps) {
       {hasVideo && (
         <div className="adjust-row">
           <div>
-            <b>Redimensionar</b>
+            <b>{t("task.resize")}</b>
             <div className="card-hint">
-              largura alvo (altura proporcional) — original: {file.info.video?.width}×
-              {file.info.video?.height}
+              {t("task.resizeHint", {
+                w: file.info.video?.width ?? 0,
+                h: file.info.video?.height ?? 0,
+              })}
             </div>
           </div>
           <select value={width} onChange={(e) => setWidth(Number(e.target.value))}>
@@ -472,40 +464,37 @@ function AdjustTab({ file, onSubmit }: TabProps) {
             ))}
           </select>
           <button className="btn" onClick={() => void onSubmit(buildResize(file.info, width))}>
-            Aplicar…
+            {t("common.apply")}
           </button>
         </div>
       )}
       {hasVideo && (
         <div className="adjust-row">
           <div>
-            <b>Rotacionar</b>
-            <div className="card-hint">vídeo gravado deitado? gire de vez (recodifica)</div>
+            <b>{t("task.rotate")}</b>
+            <div className="card-hint">{t("task.rotateHint")}</div>
           </div>
           <select
             value={rotation}
             onChange={(e) => setRotation(Number(e.target.value) as Rotation)}
           >
-            <option value={90}>90° horário</option>
+            <option value={90}>{t("task.rot90cw")}</option>
             <option value={180}>180°</option>
-            <option value={270}>90° anti-horário</option>
+            <option value={270}>{t("task.rot90ccw")}</option>
           </select>
           <button className="btn" onClick={() => void onSubmit(buildRotate(file.info, rotation))}>
-            Aplicar…
+            {t("common.apply")}
           </button>
         </div>
       )}
       <div className="adjust-row">
         <div>
-          <b>Normalizar volume</b>
-          <div className="card-hint">
-            nivela o áudio pro padrão de streaming (loudnorm EBU R128) — bom pra áudio baixo
-            ou irregular
-          </div>
+          <b>{t("task.loudnorm")}</b>
+          <div className="card-hint">{t("task.loudnormHint")}</div>
         </div>
         <span />
         <button className="btn" onClick={() => void onSubmit(buildLoudnorm(file.info))}>
-          Aplicar…
+          {t("common.apply")}
         </button>
       </div>
     </div>

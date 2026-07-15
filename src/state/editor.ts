@@ -29,6 +29,7 @@ import {
   type VideoTrackOpts,
 } from "../lib/editor/model";
 import { buildTimelineExport } from "../lib/editor/render";
+import { t as tr } from "../lib/i18n";
 import { IMAGE_EXTENSIONS, type MediaInfo } from "../lib/types";
 import { useStore } from "./store";
 import { useUi } from "./ui";
@@ -246,7 +247,7 @@ export const useEditor = create<EditorState>((set, get) => ({
       const hasVideo = !isImage && info.video !== null && info.durationMs > 0;
       const hasAudio = !isImage && info.audio.length > 0 && info.durationMs > 0;
       if (!isImage && !hasVideo && !hasAudio) {
-        toast("error", `${info.name}: sem vídeo nem áudio utilizável.`);
+        toast("error", tr("editor.noVideoAudio", { name: info.name }));
         continue;
       }
       const s = get();
@@ -369,7 +370,7 @@ export const useEditor = create<EditorState>((set, get) => ({
             });
           } else {
             added[added.length - 1] = { ...added[added.length - 1], linkId: "" };
-            toast("info", `${info.name}: sem faixa de áudio livre — só o vídeo entrou.`);
+            toast("info", tr("editor.noFreeAudio", { name: info.name }));
           }
         }
       } else {
@@ -474,7 +475,7 @@ export const useEditor = create<EditorState>((set, get) => ({
     const at = s.playheadMs;
     const clip = s.clips.find((c) => c.id === s.selectedId);
     if (!clip) {
-      useUi.getState().toast("info", "Selecione um clipe pra dividir.");
+      useUi.getState().toast("info", tr("editor.selectToSplit"));
       return;
     }
     const partner = clip.linkId
@@ -486,7 +487,7 @@ export const useEditor = create<EditorState>((set, get) => ({
     const before = clips.length;
     clips = splitClip(clips, clip.id, at, newId(), rightLink);
     if (clips.length === before) {
-      useUi.getState().toast("info", "Posicione o cursor dentro do clipe selecionado.");
+      useUi.getState().toast("info", tr("editor.cursorInClip"));
       return;
     }
     if (partner) clips = splitClip(clips, partner.id, at, newId(), rightLink);
@@ -563,7 +564,7 @@ export const useEditor = create<EditorState>((set, get) => ({
       ? s.clips.find((c) => c.id !== clip.id && c.linkId === clip.linkId)
       : undefined;
     set({ clipboard: partner ? [clip, partner] : [clip] });
-    useUi.getState().toast("info", partner ? "Par copiado." : "Clipe copiado.");
+    useUi.getState().toast("info", partner ? tr("editor.pairCopied") : tr("editor.clipCopied"));
   },
 
   pasteAtPlayhead() {
@@ -674,7 +675,7 @@ export const useEditor = create<EditorState>((set, get) => ({
     const clip: Clip = {
       id: newId(),
       kind: "text",
-      src: { path: "", name: "Título", durationMs: 0, width: 0, height: 0 },
+      src: { path: "", name: tr("editor.titleFallback"), durationMs: 0, width: 0, height: 0 },
       track,
       startMs: at,
       inMs: 0,
@@ -687,7 +688,7 @@ export const useEditor = create<EditorState>((set, get) => ({
       w: 0.8,
       linkId: "",
       ...CLIP_DEFAULTS,
-      text: "Seu texto aqui",
+      text: tr("editor.textDefault"),
     };
     set((st) => ({
       undoStack: [...st.undoStack.slice(-49), snap(st)],
@@ -742,7 +743,7 @@ export const useEditor = create<EditorState>((set, get) => ({
       kind === "video" ? isVideoKind(c.kind) && c.track === top : c.kind === "audio" && c.track === top,
     );
     if (busy) {
-      useUi.getState().toast("info", "A trilha de cima ainda tem clipes.");
+      useUi.getState().toast("info", tr("editor.topTrackBusy"));
       return;
     }
     set((st) => ({
@@ -813,7 +814,7 @@ export const useEditor = create<EditorState>((set, get) => ({
     // Trilha oculta e áudio mudo/sem-solo ficam fora, como no preview.
     const visible = visibleClips(s.clips, s.vTracks, s.aTracks);
     if (visible.length === 0) {
-      toast("info", "Nada visível pra exportar — confira as trilhas ocultas/mudas.");
+      toast("info", tr("editor.nothingVisible"));
       return;
     }
     set({ playing: false });
@@ -824,29 +825,29 @@ export const useEditor = create<EditorState>((set, get) => ({
     const withPath = s.clips.find((c) => c.src.path);
     const dir = withPath ? `${stemDir(withPath.src.path)}${SEP}` : "";
     const out = await save({
-      title: "Exportar projeto",
+      title: tr("editor.exportTitle"),
       defaultPath: `${dir}projeto - ${built.suffix}.${built.ext}`,
       filters: [{ name: built.ext.toUpperCase(), extensions: [built.ext] }],
     }).catch(() => null);
     if (!out) return;
     useStore.getState().enqueue(built, out);
     useUi.getState().setView("home");
-    toast("success", "Exportação na fila — acompanhe o progresso aqui.");
+    toast("success", tr("editor.exportQueued"));
   },
 
   async saveProjectAs() {
     const s = get();
     const toast = useUi.getState().toast;
     if (s.clips.length === 0) {
-      toast("info", "Nada pra salvar ainda.");
+      toast("info", tr("editor.nothingToSave"));
       return;
     }
     const withPath = s.clips.find((c) => c.src.path);
     const dir = withPath ? `${stemDir(withPath.src.path)}${SEP}` : "";
     const out = await save({
-      title: "Salvar projeto",
+      title: tr("editor.saveTitle"),
       defaultPath: `${dir}projeto.localmedia.json`,
-      filters: [{ name: "Projeto LocalMedia", extensions: ["json"] }],
+      filters: [{ name: tr("editor.projectFilter"), extensions: ["json"] }],
     }).catch(() => null);
     if (!out) return;
     const file: ProjectFile = {
@@ -859,7 +860,7 @@ export const useEditor = create<EditorState>((set, get) => ({
     };
     try {
       await be.writeTextFile(out, JSON.stringify(file, null, 1));
-      toast("success", "Projeto salvo.");
+      toast("success", tr("editor.projectSaved"));
     } catch (e) {
       toast("error", String(e));
     }
@@ -869,14 +870,14 @@ export const useEditor = create<EditorState>((set, get) => ({
     const toast = useUi.getState().toast;
     const picked = await open({
       multiple: false,
-      title: "Abrir projeto",
-      filters: [{ name: "Projeto LocalMedia", extensions: ["json"] }],
+      title: tr("editor.openTitle"),
+      filters: [{ name: tr("editor.projectFilter"), extensions: ["json"] }],
     }).catch(() => null);
     if (!picked || Array.isArray(picked)) return;
     try {
       const raw = JSON.parse(await be.readTextFile(picked)) as Record<string, unknown>;
       const clips = sanitizeClips(raw.clips);
-      if (clips.length === 0) throw new Error("arquivo sem clipes válidos");
+      if (clips.length === 0) throw new Error(tr("editor.noValidClips"));
       const tracks = sanitizeTracks(raw);
       set((st) => ({
         undoStack: [...st.undoStack.slice(-49), snap(st)],
@@ -892,9 +893,9 @@ export const useEditor = create<EditorState>((set, get) => ({
       for (const c of clips) {
         if (c.kind === "video") requestThumb(c.src.path, c.src.durationMs);
       }
-      toast("success", "Projeto aberto.");
+      toast("success", tr("editor.projectOpened"));
     } catch (e) {
-      toast("error", `Não consegui abrir o projeto: ${e}`);
+      toast("error", tr("editor.openFailed", { e: String(e) }));
     }
   },
 }));

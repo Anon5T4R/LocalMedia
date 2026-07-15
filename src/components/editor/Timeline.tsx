@@ -16,6 +16,7 @@ import {
   type Clip,
 } from "../../lib/editor/model";
 import { fileSrc } from "../../lib/backend";
+import { t } from "../../lib/i18n";
 import { fmtDur } from "../../lib/time";
 import { useEditor, type DropTarget } from "../../state/editor";
 
@@ -234,7 +235,7 @@ export default function Timeline() {
               {kind === "video" ? (
                 <button
                   className={`tl2-tbtn ${vTracks[track]?.hidden ? "off" : ""}`}
-                  title={vTracks[track]?.hidden ? "Trilha oculta — clique pra mostrar" : "Ocultar trilha (fica fora do preview e da exportação)"}
+                  title={vTracks[track]?.hidden ? t("tl.trackHidden") : t("tl.trackHide")}
                   onClick={() => toggleTrackHidden(track)}
                 >
                   {vTracks[track]?.hidden ? "🚫" : "👁"}
@@ -243,14 +244,14 @@ export default function Timeline() {
                 <>
                   <button
                     className={`tl2-tbtn ${aTracks[track]?.muted ? "active-m" : ""}`}
-                    title="Mudo (M): silencia esta faixa"
+                    title={t("tl.muteTitle")}
                     onClick={() => toggleTrackMuted(track)}
                   >
                     M
                   </button>
                   <button
                     className={`tl2-tbtn ${aTracks[track]?.solo ? "active-s" : ""}`}
-                    title="Solo (S): só as faixas em solo tocam"
+                    title={t("tl.soloTitle")}
                     onClick={() => toggleTrackSolo(track)}
                   >
                     S
@@ -310,10 +311,10 @@ export default function Timeline() {
                     onPointerUp={onClipPointerUp}
                   >
                     <span className="tl-clip-name">
-                      {c.linkId && <span title="vinculado ao par áudio/vídeo">🔗 </span>}
+                      {c.linkId && <span title={t("tl.linkedTitle")}>🔗 </span>}
                       {c.muted && "🔇 "}
                       {c.speed !== 1 && `${c.speed}× `}
-                      {c.kind === "text" ? `𝐓 ${c.text || "Título"}` : c.src.name}
+                      {c.kind === "text" ? `𝐓 ${c.text || t("editor.titleFallback")}` : c.src.name}
                     </span>
                     {c.fadeInMs > 0 && (
                       <span

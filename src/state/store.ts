@@ -5,6 +5,7 @@
 import { create } from "zustand";
 import { listen } from "@tauri-apps/api/event";
 import * as be from "../lib/backend";
+import { t as tr } from "../lib/i18n";
 import { parseProbe } from "../lib/probe";
 import type { BuiltJob } from "../lib/presets";
 import type { Job, MediaFile } from "../lib/types";
@@ -206,13 +207,13 @@ async function runQueue(set: Set, get: () => Store) {
         }
         if ((get().queue.find((j) => j.id === id)?.status ?? "") === "cancelled") continue;
         patchJob(set, id, { status: "done", pct: 100 });
-        toast("success", `${job.label}: pronto.`);
+        toast("success", tr("store.jobDone", { label: job.label }));
       } catch (e) {
         const cancelled =
           (get().queue.find((j) => j.id === id)?.status ?? "") === "cancelled";
         if (!cancelled) {
           patchJob(set, id, { status: "error", error: String(e) });
-          toast("error", `${job.label} falhou: ${e}`);
+          toast("error", tr("store.jobFailed", { label: job.label, e: String(e) }));
         }
       }
     }

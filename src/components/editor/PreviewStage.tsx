@@ -7,6 +7,7 @@
 
 import { useEffect, useRef } from "react";
 import { fileSrc } from "../../lib/backend";
+import { t } from "../../lib/i18n";
 import {
   clipEndMs,
   isVideoKind,
@@ -211,7 +212,7 @@ export default function PreviewStage() {
             {selectedId === c.id && c.kind !== "text" && c.fit === "custom" && (
               <span
                 className="layer-resize"
-                title="Arraste pra redimensionar"
+                title={t("pv.resizeTitle")}
                 onPointerDown={(e) => onBoxPointerDown(e, c, "resize")}
                 onPointerMove={onBoxPointerMove}
                 onPointerUp={onBoxPointerUp}

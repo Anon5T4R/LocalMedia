@@ -1,8 +1,11 @@
 import { open } from "@tauri-apps/plugin-dialog";
+import { LOCALE_LABELS, type Locale, setLocale, t, useLocale } from "../lib/i18n";
 import { IMAGE_EXTENSIONS, MEDIA_EXTENSIONS } from "../lib/types";
 import { useEditor } from "../state/editor";
 import { useStore } from "../state/store";
 import { useUi } from "../state/ui";
+
+const LOCALES: Locale[] = ["pt", "en", "es"];
 
 interface Props {
   theme: "light" | "dark";
@@ -15,15 +18,16 @@ export default function TopBar({ theme, onToggleTheme }: Props) {
   const view = useUi((s) => s.view);
   const setView = useUi((s) => s.setView);
   const setBatchOpen = useUi((s) => s.setBatchOpen);
+  const locale = useLocale();
 
   async function pickFiles() {
     const inEditor = view === "editor";
     const picked = await open({
       multiple: true,
-      title: inEditor ? "Adicionar mídia ao projeto" : "Abrir mídia",
+      title: inEditor ? t("topbar.addMediaProject") : t("topbar.openMedia"),
       filters: [
         {
-          name: inEditor ? "Mídia e imagens" : "Vídeo e áudio",
+          name: inEditor ? t("topbar.filterMediaImages") : t("topbar.filterVideoAudio"),
           extensions: inEditor ? [...MEDIA_EXTENSIONS, ...IMAGE_EXTENSIONS] : MEDIA_EXTENSIONS,
         },
       ],
@@ -45,31 +49,43 @@ export default function TopBar({ theme, onToggleTheme }: Props) {
           className={`view-btn ${view === "home" ? "active" : ""}`}
           onClick={() => setView("home")}
         >
-          Converter
+          {t("topbar.convert")}
         </button>
         <button
           className={`view-btn ${view === "editor" ? "active" : ""}`}
           onClick={() => setView("editor")}
         >
-          Editor
+          {t("topbar.editor")}
         </button>
       </div>
       <div className="topbar-actions">
         <button className="btn primary" onClick={pickFiles}>
-          + Abrir mídia
+          + {t("topbar.openMedia")}
         </button>
         {view === "home" && files.length > 1 && (
           <button className="btn" onClick={() => setBatchOpen(true)}>
-            Lote
+            {t("topbar.batch")}
           </button>
         )}
         <button
           className="icon-btn"
           onClick={onToggleTheme}
-          title={theme === "dark" ? "Tema claro" : "Tema escuro"}
+          title={theme === "dark" ? t("topbar.themeLight") : t("topbar.themeDark")}
         >
           {theme === "dark" ? "☀" : "🌙"}
         </button>
+        <select
+          className="lang-select"
+          value={locale}
+          onChange={(e) => setLocale(e.target.value as Locale)}
+          title="Idioma / Language"
+        >
+          {LOCALES.map((l) => (
+            <option key={l} value={l}>
+              {LOCALE_LABELS[l]}
+            </option>
+          ))}
+        </select>
       </div>
     </header>
   );

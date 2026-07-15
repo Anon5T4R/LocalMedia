@@ -1,32 +1,33 @@
 // Ajuda do editor (botão ? / F1): atalhos de teclado e dicas de uso.
 
+import { t, type MessageKey } from "../../lib/i18n";
 import { useUi } from "../../state/ui";
 
-const SHORTCUTS: [string, string][] = [
-  ["Espaço", "reproduzir / pausar"],
-  ["S", "dividir o clipe selecionado no cursor"],
-  ["Delete", "remover o clipe selecionado"],
-  ["Shift+Delete", "remover e fechar o buraco (ripple)"],
-  ["Ctrl+C / Ctrl+V", "copiar / colar no cursor"],
-  ["Ctrl+D", "duplicar o clipe"],
-  ["Ctrl+Z / Ctrl+Shift+Z", "desfazer / refazer"],
-  ["← / → (Shift = 1 s)", "mover o cursor"],
-  ["Home / End", "início / fim do projeto"],
-  ["Ctrl+roda do mouse", "zoom na timeline"],
-  ["Esc", "desmarcar / fechar"],
-  ["? ou F1", "esta ajuda"],
+const SHORTCUTS: [MessageKey, MessageKey][] = [
+  ["help.sc.space.k", "help.sc.space.d"],
+  ["help.sc.split.k", "help.sc.split.d"],
+  ["help.sc.del.k", "help.sc.del.d"],
+  ["help.sc.rdel.k", "help.sc.rdel.d"],
+  ["help.sc.copy.k", "help.sc.copy.d"],
+  ["help.sc.dup.k", "help.sc.dup.d"],
+  ["help.sc.undo.k", "help.sc.undo.d"],
+  ["help.sc.move.k", "help.sc.move.d"],
+  ["help.sc.homeend.k", "help.sc.homeend.d"],
+  ["help.sc.zoom.k", "help.sc.zoom.d"],
+  ["help.sc.esc.k", "help.sc.esc.d"],
+  ["help.sc.help.k", "help.sc.help.d"],
 ];
 
-const TIPS: string[] = [
-  "Vídeo com som entra como um par vinculado (🔗): mover um move o outro. Use “Desvincular” pra cortar, dividir ou apagar um trecho só do áudio ou só do vídeo.",
-  "As camadas V2+ ficam por cima do V1 — perfeitas pra picture-in-picture, marca-d'água e títulos. Arraste a camada direto no preview pra posicionar; a alça laranja redimensiona.",
-  "Dá pra soltar arquivos direto na trilha e no tempo certos (a música na A2 aos 0:30, por exemplo). Sem mirar, os padrões ajudam: imagem vira camada por cima no cursor; música cai numa faixa livre em cima do som do vídeo.",
-  "Nos cabeçalhos das trilhas: 👁 oculta a camada de vídeo; M silencia a faixa; S (solo) deixa só as faixas em solo tocando. Tudo vale pro preview E pra exportação.",
-  "🧲 liga/desliga o snap (os clipes grudam nas bordas vizinhas e no cursor). ⤢ ajusta o zoom pro projeto inteiro.",
-  "＋ Texto põe um título por cima do vídeo — edite conteúdo, cor, tamanho e fundo no painel da direita.",
-  "Velocidade, fades, opacidade, rotação e espelhar ficam no painel da direita com o clipe selecionado.",
-  "O projeto se salva sozinho como rascunho (volta ao abrir o app). 💾 salva num arquivo .json pra guardar ou levar; 📂 abre.",
-  "A exportação junta tudo num MP4 (H.264/AAC) — escolha a qualidade no painel do projeto (sem clipe selecionado).",
+const TIPS: MessageKey[] = [
+  "help.tip1",
+  "help.tip2",
+  "help.tip3",
+  "help.tip4",
+  "help.tip5",
+  "help.tip6",
+  "help.tip7",
+  "help.tip8",
+  "help.tip9",
 ];
 
 export default function HelpModal() {
@@ -38,32 +39,32 @@ export default function HelpModal() {
     <div className="modal-backdrop" onClick={() => setOpen(false)}>
       <div className="modal help-modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-head">
-          <h2>Ajuda do editor</h2>
+          <h2>{t("help.title")}</h2>
           <button className="icon-btn" onClick={() => setOpen(false)}>
             ✕
           </button>
         </div>
         <div className="help-cols">
           <div>
-            <div className="track-title">Atalhos</div>
+            <div className="track-title">{t("help.shortcuts")}</div>
             <table className="help-keys">
               <tbody>
                 {SHORTCUTS.map(([k, desc]) => (
                   <tr key={k}>
                     <td>
-                      <kbd>{k}</kbd>
+                      <kbd>{t(k)}</kbd>
                     </td>
-                    <td>{desc}</td>
+                    <td>{t(desc)}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
           <div>
-            <div className="track-title">Dicas</div>
+            <div className="track-title">{t("help.tips")}</div>
             <ul className="help-tips">
-              {TIPS.map((t) => (
-                <li key={t.slice(0, 24)}>{t}</li>
+              {TIPS.map((tip) => (
+                <li key={tip}>{t(tip)}</li>
               ))}
             </ul>
           </div>

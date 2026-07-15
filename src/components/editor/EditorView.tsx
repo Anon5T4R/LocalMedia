@@ -7,6 +7,7 @@
 import { useEffect } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
 import { projectDurMs } from "../../lib/editor/model";
+import { t } from "../../lib/i18n";
 import { fmtCut } from "../../lib/time";
 import { IMAGE_EXTENSIONS, MEDIA_EXTENSIONS } from "../../lib/types";
 import { useEditor } from "../../state/editor";
@@ -50,9 +51,9 @@ export default function EditorView() {
   async function pickMedia() {
     const picked = await open({
       multiple: true,
-      title: "Adicionar mídia ao projeto",
+      title: t("topbar.addMediaProject"),
       filters: [
-        { name: "Mídia e imagens", extensions: [...MEDIA_EXTENSIONS, ...IMAGE_EXTENSIONS] },
+        { name: t("topbar.filterMediaImages"), extensions: [...MEDIA_EXTENSIONS, ...IMAGE_EXTENSIONS] },
       ],
     }).catch(() => null);
     if (!picked) return;
@@ -127,16 +128,16 @@ export default function EditorView() {
 
       <div className="editor-toolbar">
         <button className="btn small" onClick={() => void pickMedia()}>
-          ＋ Mídia
+          ＋ {t("ed.media")}
         </button>
-        <button className="btn small" onClick={addTextClip} title="Título por cima do vídeo">
-          ＋ Texto
+        <button className="btn small" onClick={addTextClip} title={t("ed.textTitle")}>
+          ＋ {t("ed.text")}
         </button>
         <button
           className="btn small"
           onClick={() => setPlaying(!playing)}
           disabled={clips.length === 0}
-          title="Espaço"
+          title={t("ed.playTitle")}
         >
           {playing ? "⏸" : "▶"}
         </button>
@@ -144,85 +145,79 @@ export default function EditorView() {
           {fmtCut(playheadMs)} / {fmtCut(durMs)}
         </span>
         <span className="toolbar-sep" />
-        <button className="btn small" onClick={splitAtPlayhead} title="S — divide o clipe selecionado no cursor">
-          ✂ Dividir
+        <button className="btn small" onClick={splitAtPlayhead} title={t("ed.splitTitle")}>
+          ✂ {t("ed.split")}
         </button>
-        <button className="btn small" onClick={removeSelected} title="Delete (Shift+Delete fecha o buraco)">
+        <button className="btn small" onClick={removeSelected} title={t("ed.removeTitle")}>
           🗑
         </button>
-        <button className="btn small" onClick={undo} disabled={undoStack.length === 0} title="Ctrl+Z">
+        <button className="btn small" onClick={undo} disabled={undoStack.length === 0} title={t("ed.undoTitle")}>
           ↩
         </button>
-        <button className="btn small" onClick={redo} disabled={redoStack.length === 0} title="Ctrl+Shift+Z">
+        <button className="btn small" onClick={redo} disabled={redoStack.length === 0} title={t("ed.redoTitle")}>
           ↪
         </button>
         <span className="toolbar-sep" />
-        <button className="btn small" onClick={() => addTrack("video")} disabled={vTracks.length >= 4} title="Nova camada de vídeo (V2+ fica por cima)">
-          ＋ Camada
+        <button className="btn small" onClick={() => addTrack("video")} disabled={vTracks.length >= 4} title={t("ed.addVideoTrackTitle")}>
+          ＋ {t("ed.layer")}
         </button>
-        <button className="btn small" onClick={() => removeTrack("video")} disabled={vTracks.length <= 1} title="Remove a camada de cima (se vazia)">
+        <button className="btn small" onClick={() => removeTrack("video")} disabled={vTracks.length <= 1} title={t("ed.removeVideoTrackTitle")}>
           −
         </button>
-        <button className="btn small" onClick={() => addTrack("audio")} disabled={aTracks.length >= 4} title="Nova faixa de áudio">
-          ＋ Faixa de áudio
+        <button className="btn small" onClick={() => addTrack("audio")} disabled={aTracks.length >= 4} title={t("ed.addAudioTrackTitle")}>
+          ＋ {t("ed.audioTrack")}
         </button>
-        <button className="btn small" onClick={() => removeTrack("audio")} disabled={aTracks.length <= 1} title="Remove a faixa de cima (se vazia)">
+        <button className="btn small" onClick={() => removeTrack("audio")} disabled={aTracks.length <= 1} title={t("ed.removeAudioTrackTitle")}>
           −
         </button>
         <span className="toolbar-sep" />
         <button
           className={`btn small ${snapOn ? "primary" : ""}`}
           onClick={toggleSnap}
-          title="Snap: os clipes grudam nas bordas vizinhas e no cursor"
+          title={t("ed.snapTitle")}
         >
           🧲
         </button>
-        <button className="btn small" onClick={() => setZoom(pxPerSec * 0.8)} title="Ctrl+roda também dá zoom">
+        <button className="btn small" onClick={() => setZoom(pxPerSec * 0.8)} title={t("ed.zoomOutTitle")}>
           −
         </button>
         <button className="btn small" onClick={() => setZoom(pxPerSec * 1.25)}>
           ＋
         </button>
-        <button className="btn small" onClick={zoomFit} disabled={clips.length === 0} title="Ajustar o zoom pro projeto inteiro">
+        <button className="btn small" onClick={zoomFit} disabled={clips.length === 0} title={t("ed.zoomFitTitle")}>
           ⤢
         </button>
         <span className="toolbar-spacer" />
         <button
           className="btn small"
           onClick={() => useUi.getState().setHelpOpen(true)}
-          title="Atalhos e dicas (? ou F1)"
+          title={t("ed.helpTitle")}
         >
           ?
         </button>
-        <button className="btn small" onClick={() => void openProjectFile()} title="Abrir projeto salvo (.json)">
+        <button className="btn small" onClick={() => void openProjectFile()} title={t("ed.openProjectTitle")}>
           📂
         </button>
         <button
           className="btn small"
           onClick={() => void saveProjectAs()}
           disabled={clips.length === 0}
-          title="Salvar projeto (.json) — o rascunho também fica guardado sozinho"
+          title={t("ed.saveProjectTitle")}
         >
           💾
         </button>
         <button className="btn ghost small" onClick={clearProject} disabled={clips.length === 0}>
-          Limpar
+          {t("ed.clear")}
         </button>
         <button className="btn primary small" onClick={() => void exportProject()} disabled={clips.length === 0}>
-          Exportar…
+          {t("ed.export")}
         </button>
       </div>
 
       {clips.length === 0 ? (
         <div className="editor-empty" onClick={() => void pickMedia()}>
           <div className="drop-icon">🎞️</div>
-          <p>
-            Arraste vídeos, áudios e imagens pra cá — dá pra soltar direto na trilha e no
-            tempo certos. Vídeo com som entra como um par vinculado (desvincule pra recortar
-            só o áudio ou só o vídeo); imagem com vídeo presente vira camada por cima
-            (arraste-a no preview pra posicionar); música nova cai numa faixa livre em cima
-            do som do vídeo.
-          </p>
+          <p>{t("ed.emptyText")}</p>
         </div>
       ) : (
         <Timeline />

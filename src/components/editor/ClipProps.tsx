@@ -3,23 +3,24 @@
 // ajustes do projeto (resolução/fps/qualidade da exportação).
 
 import { clipDurMs, clipEndMs, isFreeSource } from "../../lib/editor/model";
+import { t, type MessageKey } from "../../lib/i18n";
 import { fmtCut } from "../../lib/time";
 import { useEditor } from "../../state/editor";
 
-const RESOLUTIONS: [string, number, number][] = [
-  ["1080p (1920×1080)", 1920, 1080],
-  ["720p (1280×720)", 1280, 720],
-  ["480p (854×480)", 854, 480],
-  ["Vertical (1080×1920)", 1080, 1920],
-  ["Quadrado (1080×1080)", 1080, 1080],
+const RESOLUTIONS: [MessageKey, number, number][] = [
+  ["cp.res1080", 1920, 1080],
+  ["cp.res720", 1280, 720],
+  ["cp.res480", 854, 480],
+  ["cp.resVertical", 1080, 1920],
+  ["cp.resSquare", 1080, 1080],
 ];
 
 const SPEEDS = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 2, 3, 4];
 
-const QUALITIES: [number, string][] = [
-  [18, "Máxima (arquivo maior)"],
-  [20, "Alta (padrão)"],
-  [26, "Compacta (arquivo menor)"],
+const QUALITIES: [number, MessageKey][] = [
+  [18, "cp.qMax"],
+  [20, "cp.qHigh"],
+  [26, "cp.qCompact"],
 ];
 
 export default function ClipProps() {
@@ -51,9 +52,9 @@ export default function ClipProps() {
     const resValue = `${project.width}x${project.height}`;
     return (
       <aside className="clip-props">
-        <h3>Projeto</h3>
+        <h3>{t("cp.project")}</h3>
         <label className="prop-row">
-          Resolução
+          {t("cp.resolution")}
           <select
             value={resValue}
             onChange={(e) => {
@@ -63,12 +64,12 @@ export default function ClipProps() {
           >
             {!RESOLUTIONS.some(([, w, h]) => `${w}x${h}` === resValue) && (
               <option value={resValue}>
-                Do 1º vídeo ({project.width}×{project.height})
+                {t("cp.resFromFirst", { w: project.width, h: project.height })}
               </option>
             )}
             {RESOLUTIONS.map(([label, w, h]) => (
               <option key={label} value={`${w}x${h}`}>
-                {label}
+                {t(label)}
               </option>
             ))}
           </select>
@@ -84,19 +85,17 @@ export default function ClipProps() {
           </select>
         </label>
         <label className="prop-row">
-          Qualidade
+          {t("cp.quality")}
           <select value={exportCrf} onChange={(e) => setExportCrf(Number(e.target.value))}>
             {QUALITIES.map(([crf, label]) => (
               <option key={crf} value={crf}>
-                {label}
+                {t(label)}
               </option>
             ))}
           </select>
         </label>
         <p className="card-hint">
-          Clique num clipe pra editar volume, velocidade, fades, posição da camada e vínculo.
-          Vídeos com som entram como um par vinculado (🔗): desvincule pra recortar só o
-          áudio ou só o vídeo. O botão <b>＋ Texto</b> põe títulos por cima do vídeo.
+          {t("cp.projectHintPre")} <b>{t("cp.textBtn")}</b> {t("cp.projectHintPost")}
         </p>
       </aside>
     );
@@ -104,32 +103,32 @@ export default function ClipProps() {
 
   const kindLabel =
     clip.kind === "video"
-      ? "vídeo"
+      ? t("cp.kind.video")
       : clip.kind === "image"
-        ? "imagem"
+        ? t("cp.kind.image")
         : clip.kind === "text"
-          ? "título"
-          : "áudio";
+          ? t("cp.kind.text")
+          : t("cp.kind.audio");
   const isVisual = clip.kind === "video" || clip.kind === "image";
 
   return (
     <aside className="clip-props">
       <h3 title={clip.src.path || clip.text}>
-        {clip.kind === "text" ? clip.text || "Título" : clip.src.name}
+        {clip.kind === "text" ? clip.text || t("editor.titleFallback") : clip.src.name}
       </h3>
       <div className="prop-meta">
         <span className="chip">{kindLabel}</span>
         <span className="chip">
           {fmtCut(clip.startMs)} → {fmtCut(clipEndMs(clip))}
         </span>
-        <span className="chip">dura {fmtCut(clipDurMs(clip))}</span>
+        <span className="chip">{t("cp.dura", { dur: fmtCut(clipDurMs(clip)) })}</span>
         {clip.speed !== 1 && <span className="chip">{clip.speed}×</span>}
       </div>
 
       {clip.kind === "text" && (
         <>
           <label className="prop-row">
-            Texto
+            {t("cp.text")}
             <input
               type="text"
               value={clip.text}
@@ -137,7 +136,7 @@ export default function ClipProps() {
             />
           </label>
           <label className="prop-row">
-            Tamanho
+            {t("cp.size")}
             <input
               type="range"
               min={0.03}
@@ -150,7 +149,7 @@ export default function ClipProps() {
             <b>{Math.round(clip.textSize * 100)}%</b>
           </label>
           <label className="prop-row">
-            Cor
+            {t("cp.color")}
             <input
               type="color"
               value={clip.textColor}
@@ -162,7 +161,7 @@ export default function ClipProps() {
                 checked={clip.textBox}
                 onChange={() => setTextProps(clip.id, { textBox: !clip.textBox })}
               />
-              <span>Fundo</span>
+              <span>{t("cp.background")}</span>
             </label>
           </label>
           {(
@@ -191,7 +190,7 @@ export default function ClipProps() {
       {clip.kind === "audio" && (
         <>
           <label className="prop-row">
-            Volume
+            {t("cp.volume")}
             <input
               type="range"
               min={0}
@@ -212,7 +211,7 @@ export default function ClipProps() {
                 toggleMute(clip.id);
               }}
             />
-            <span>Mudo (fica fora da exportação)</span>
+            <span>{t("cp.muted")}</span>
           </label>
         </>
       )}
@@ -220,7 +219,7 @@ export default function ClipProps() {
       {isVisual && (
         <>
           <label className="prop-row">
-            Enquadr.
+            {t("cp.fit")}
             <select
               value={clip.fit}
               onChange={(e) => {
@@ -228,8 +227,8 @@ export default function ClipProps() {
                 setFit(clip.id, e.target.value as "cheia" | "custom");
               }}
             >
-              <option value="cheia">Tela cheia</option>
-              <option value="custom">Camada (posição livre)</option>
+              <option value="cheia">{t("cp.fitFull")}</option>
+              <option value="custom">{t("cp.fitLayer")}</option>
             </select>
           </label>
           {clip.fit === "custom" && (
@@ -242,7 +241,7 @@ export default function ClipProps() {
                 ] as const
               ).map(([label, key, min, max]) => (
                 <label key={key} className="prop-row">
-                  {label}
+                  {label === "Largura" ? t("cp.width") : label}
                   <input
                     type="range"
                     min={min}
@@ -258,7 +257,7 @@ export default function ClipProps() {
             </>
           )}
           <label className="prop-row">
-            Rotação
+            {t("cp.rotation")}
             <select
               value={clip.rotation}
               onChange={(e) => {
@@ -266,10 +265,10 @@ export default function ClipProps() {
                 setRotation(clip.id, Number(e.target.value) as 0 | 90 | 180 | 270);
               }}
             >
-              <option value={0}>Sem rotação</option>
-              <option value={90}>90° horário</option>
+              <option value={0}>{t("cp.rotNone")}</option>
+              <option value={90}>{t("task.rot90cw")}</option>
               <option value={180}>180°</option>
-              <option value={270}>90° anti-horário</option>
+              <option value={270}>{t("task.rot90ccw")}</option>
             </select>
           </label>
           <label className="check-row">
@@ -281,14 +280,14 @@ export default function ClipProps() {
                 toggleFlipH(clip.id);
               }}
             />
-            <span>Espelhar na horizontal</span>
+            <span>{t("cp.flipH")}</span>
           </label>
         </>
       )}
 
       {(isVisual || clip.kind === "text") && (
         <label className="prop-row">
-          Opacidade
+          {t("cp.opacity")}
           <input
             type="range"
             min={0.1}
@@ -304,7 +303,7 @@ export default function ClipProps() {
 
       {(clip.kind === "video" || clip.kind === "audio") && (
         <label className="prop-row">
-          Velocidade
+          {t("cp.speed")}
           <select
             value={clip.speed}
             onChange={(e) => {
@@ -325,7 +324,7 @@ export default function ClipProps() {
       {clip.kind !== "text" && (
         <>
           <label className="prop-row">
-            Fade in
+            {t("cp.fadeIn")}
             <input
               type="range"
               min={0}
@@ -338,7 +337,7 @@ export default function ClipProps() {
             <b>{(clip.fadeInMs / 1000).toFixed(1)}s</b>
           </label>
           <label className="prop-row">
-            Fade out
+            {t("cp.fadeOut")}
             <input
               type="range"
               min={0}
@@ -355,7 +354,7 @@ export default function ClipProps() {
 
       {isFreeSource(clip.kind) && (
         <label className="prop-row">
-          Duração (s)
+          {t("cp.duration")}
           <input
             type="number"
             min={0.5}
@@ -376,22 +375,23 @@ export default function ClipProps() {
           <button
             className="btn small"
             onClick={unlinkSelected}
-            title="Separar áudio e vídeo pra editar cada um sozinho"
+            title={t("cp.unlinkTitle")}
           >
-            🔗 Desvincular
+            🔗 {t("cp.unlink")}
           </button>
         )}
-        <button className="btn small" onClick={duplicateSelected} title="Ctrl+D">
-          ⧉ Duplicar
+        <button className="btn small" onClick={duplicateSelected} title={t("cp.duplicateTitle")}>
+          ⧉ {t("cp.duplicate")}
         </button>
         <button className="btn small" onClick={removeSelected}>
-          🗑 Remover
+          🗑 {t("cp.remove")}
         </button>
       </div>
       {clip.linkId && (
         <p className="card-hint">
-          Este clipe está vinculado ao par de {clip.kind === "audio" ? "vídeo" : "áudio"}:
-          mover um move o outro. Desvincule pra cortar trechos só do áudio ou só do vídeo.
+          {t("cp.linkedHint", {
+            kind: clip.kind === "audio" ? t("cp.kind.video") : t("cp.kind.audio"),
+          })}
         </p>
       )}
     </aside>

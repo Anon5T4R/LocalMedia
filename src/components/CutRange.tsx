@@ -5,6 +5,7 @@
 import { useEffect, useRef, useState } from "react";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import * as be from "../lib/backend";
+import { t } from "../lib/i18n";
 import { fmtCut, parseCut } from "../lib/time";
 import type { MediaFile } from "../lib/types";
 
@@ -83,9 +84,7 @@ export default function CutRange({ file, startMs, endMs, onChange }: Props) {
           onError={() => setVideoOk(false)}
         />
       ) : file.info.video ? (
-        <div className="cut-nopreview">
-          Preview indisponível neste formato — use as miniaturas e os campos de tempo.
-        </div>
+        <div className="cut-nopreview">{t("cut.noPreview")}</div>
       ) : (
         <audio
           className="cut-preview-audio"
@@ -138,7 +137,7 @@ export default function CutRange({ file, startMs, endMs, onChange }: Props) {
 
       <div className="cut-fields">
         <label>
-          Início
+          {t("cut.startLabel")}
           <input
             value={startText}
             onChange={(e) => setStartText(e.target.value)}
@@ -150,11 +149,11 @@ export default function CutRange({ file, startMs, endMs, onChange }: Props) {
         </label>
         {videoOk && (
           <button className="btn small" onClick={markStart}>
-            usar posição atual
+            {t("cut.useCurrent")}
           </button>
         )}
         <label>
-          Fim
+          {t("cut.endLabel")}
           <input
             value={endText}
             onChange={(e) => setEndText(e.target.value)}
@@ -166,10 +165,10 @@ export default function CutRange({ file, startMs, endMs, onChange }: Props) {
         </label>
         {videoOk && (
           <button className="btn small" onClick={markEnd}>
-            usar posição atual
+            {t("cut.useCurrent")}
           </button>
         )}
-        <span className="cut-durlabel">trecho: {fmtCut(endMs - startMs)}</span>
+        <span className="cut-durlabel">{t("cut.segment", { dur: fmtCut(endMs - startMs) })}</span>
       </div>
     </div>
   );
