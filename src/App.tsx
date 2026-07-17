@@ -9,12 +9,11 @@ import Toasts from "./components/Toasts";
 import TopBar from "./components/TopBar";
 import { inTauri } from "./lib/backend";
 import { t } from "./lib/i18n";
+import { applyTheme, loadTheme, type Theme } from "./lib/theme";
 import { IMAGE_EXTENSIONS, MEDIA_EXTENSIONS } from "./lib/types";
 import { useEditor } from "./state/editor";
 import { useStore } from "./state/store";
 import { useUi } from "./state/ui";
-
-type Theme = "light" | "dark";
 
 export default function App() {
   const init = useStore((s) => s.init);
@@ -22,19 +21,14 @@ export default function App() {
   const view = useUi((s) => s.view);
   const toast = useUi((s) => s.toast);
   const [dragging, setDragging] = useState(false);
-  const [theme, setTheme] = useState<Theme>(() => {
-    const saved = localStorage.getItem("theme");
-    if (saved === "light" || saved === "dark") return saved;
-    return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
-  });
+  const [theme, setTheme] = useState<Theme>(loadTheme);
 
   useEffect(() => {
     void init();
   }, [init]);
 
   useEffect(() => {
-    document.documentElement.setAttribute("data-theme", theme);
-    localStorage.setItem("theme", theme);
+    applyTheme(theme);
   }, [theme]);
 
   // Arrastar arquivos pra janela (evento nativo do Tauri).
@@ -84,7 +78,7 @@ export default function App() {
 
   return (
     <div className="app">
-      <TopBar theme={theme} onToggleTheme={() => setTheme(theme === "dark" ? "light" : "dark")} />
+      <TopBar theme={theme} onChangeTheme={setTheme} />
       <main className={`main ${view === "editor" ? "main-editor" : ""}`}>
         {view === "editor" ? <EditorView /> : <HomeView />}
       </main>

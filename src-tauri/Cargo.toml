@@ -1,6 +1,6 @@
 [package]
 name = "localmedia"
-version = "0.7.1"
+version = "0.8.0"
 description = "LocalMedia — conversor e cortador de mídia 100% offline (ffmpeg)"
 authors = ["Taylor"]
 edition = "2021"

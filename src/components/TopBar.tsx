@@ -1,5 +1,6 @@
 import { open } from "@tauri-apps/plugin-dialog";
 import { LOCALE_LABELS, type Locale, setLocale, t, useLocale } from "../lib/i18n";
+import { THEME_LABEL_KEYS, THEMES, type Theme } from "../lib/theme";
 import { IMAGE_EXTENSIONS, MEDIA_EXTENSIONS } from "../lib/types";
 import { useEditor } from "../state/editor";
 import { useStore } from "../state/store";
@@ -8,11 +9,11 @@ import { useUi } from "../state/ui";
 const LOCALES: Locale[] = ["pt", "en", "es"];
 
 interface Props {
-  theme: "light" | "dark";
-  onToggleTheme(): void;
+  theme: Theme;
+  onChangeTheme(theme: Theme): void;
 }
 
-export default function TopBar({ theme, onToggleTheme }: Props) {
+export default function TopBar({ theme, onChangeTheme }: Props) {
   const addPaths = useStore((s) => s.addPaths);
   const files = useStore((s) => s.files);
   const view = useUi((s) => s.view);
@@ -67,13 +68,18 @@ export default function TopBar({ theme, onToggleTheme }: Props) {
             {t("topbar.batch")}
           </button>
         )}
-        <button
-          className="icon-btn"
-          onClick={onToggleTheme}
-          title={theme === "dark" ? t("topbar.themeLight") : t("topbar.themeDark")}
+        <select
+          className="theme-select"
+          value={theme}
+          onChange={(e) => onChangeTheme(e.target.value as Theme)}
+          title={t("topbar.theme")}
         >
-          {theme === "dark" ? "☀" : "🌙"}
-        </button>
+          {THEMES.map((th) => (
+            <option key={th} value={th}>
+              {t(THEME_LABEL_KEYS[th])}
+            </option>
+          ))}
+        </select>
         <select
           className="lang-select"
           value={locale}
