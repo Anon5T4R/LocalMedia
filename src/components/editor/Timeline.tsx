@@ -159,7 +159,13 @@ export default function Timeline() {
       startY: e.clientY,
       kind: isVideoKind(clip.kind) ? "video" : "audio",
     };
-    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    // Captura blindada: com pointer não-ativo (evento sintético, caneta em
+    // transição) o setPointerCapture lança NotFoundError e mataria o gesto.
+    try {
+      (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    } catch {
+      /* sem captura: o arrasto segue, só perde o traço fora da janela */
+    }
   }
 
   function onClipPointerMove(e: React.PointerEvent) {
@@ -188,7 +194,12 @@ export default function Timeline() {
   function onRulerPointerDown(e: React.PointerEvent) {
     setPlaying(false);
     setPlayhead(msAt(e.clientX));
-    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    // Blindada: NotFoundError com pointer não-ativo mataria o handler inteiro.
+    try {
+      (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    } catch {
+      /* segue sem captura */
+    }
   }
 
   function onRulerPointerMove(e: React.PointerEvent) {

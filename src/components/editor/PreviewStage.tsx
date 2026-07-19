@@ -133,7 +133,13 @@ export default function PreviewStage() {
       startClientX: e.clientX,
       startClientY: e.clientY,
     };
-    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    // Captura blindada: com pointer não-ativo (evento sintético, caneta em
+    // transição) o setPointerCapture lança NotFoundError e mataria o gesto.
+    try {
+      (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    } catch {
+      /* sem captura: o arrasto segue, só perde o traço fora da janela */
+    }
   }
 
   function onBoxPointerMove(e: React.PointerEvent) {
