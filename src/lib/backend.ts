@@ -29,3 +29,28 @@ export const tmpPath = (name: string) => cmd<string>("tmp_path", { name });
 export const writeTextFile = (path: string, contents: string) =>
   cmd<void>("write_text_file", { path, contents });
 export const readTextFile = (path: string) => cmd<string>("read_text_file", { path });
+
+// ---- Dados e armazenamento (B11) ----
+export interface StorageInfo {
+  dir: string;
+  thumbsBytes: number;
+  thumbsFiles: number;
+  thumbsDirs: number;
+  oldThumbsBytes: number;
+  oldThumbsDirs: number;
+  tmpBytes: number;
+  tmpFiles: number;
+  oldTmpBytes: number;
+  oldTmpFiles: number;
+}
+export interface Freed {
+  files: number;
+  bytes: number;
+}
+/** `liveIds` = os ids que a sessão está usando agora. É o SEGUNDO portão da
+ *  limpeza (o primeiro é a data): sem os dois concordando, nada é apagado. */
+export const storageInfo = (liveIds: string[]) => cmd<StorageInfo>("storage_info", { liveIds });
+export const storageClearOldThumbs = (liveIds: string[]) =>
+  cmd<Freed>("storage_clear_old_thumbs", { liveIds });
+export const storageClearOldTmp = (liveIds: string[]) =>
+  cmd<Freed>("storage_clear_old_tmp", { liveIds });

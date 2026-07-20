@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
 import { LOCALE_LABELS, type Locale, setLocale, t, useLocale } from "../lib/i18n";
 import { THEME_LABEL_KEYS, THEMES, type Theme } from "../lib/theme";
@@ -5,6 +6,7 @@ import { IMAGE_EXTENSIONS, MEDIA_EXTENSIONS } from "../lib/types";
 import { useEditor } from "../state/editor";
 import { useStore } from "../state/store";
 import { useUi } from "../state/ui";
+import StorageModal from "./StorageModal";
 
 const LOCALES: Locale[] = ["pt", "en", "es"];
 
@@ -20,6 +22,7 @@ export default function TopBar({ theme, onChangeTheme }: Props) {
   const setView = useUi((s) => s.setView);
   const setBatchOpen = useUi((s) => s.setBatchOpen);
   const locale = useLocale();
+  const [storageOpen, setStorageOpen] = useState(false);
 
   async function pickFiles() {
     const inEditor = view === "editor";
@@ -68,6 +71,13 @@ export default function TopBar({ theme, onChangeTheme }: Props) {
             {t("topbar.batch")}
           </button>
         )}
+        <button
+          className="btn"
+          onClick={() => setStorageOpen(true)}
+          title={t("storage.title")}
+        >
+          {t("storage.open")}
+        </button>
         <select
           className="theme-select"
           value={theme}
@@ -93,6 +103,7 @@ export default function TopBar({ theme, onChangeTheme }: Props) {
           ))}
         </select>
       </div>
+      {storageOpen && <StorageModal onClose={() => setStorageOpen(false)} />}
     </header>
   );
 }

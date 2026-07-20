@@ -334,6 +334,42 @@ const pt = {
   "job.burnSubs": "Queimar legenda",
   "job.muxSubs": "Anexar legenda",
   "job.tracks": "Ajustar faixas",
+
+  // --- Dados e armazenamento (B11) ---
+  "storage.title": "Dados e armazenamento",
+  "storage.open": "Dados e armazenamento",
+  "storage.path": "Pasta de dados",
+  "storage.openFolder": "Abrir",
+  "storage.intro":
+    "O LocalMedia não guarda nada seu aqui: o que você converte sai no caminho que você escolheu no diálogo de salvar, e o projeto do editor fica no seu arquivo. Tudo nesta pasta é rascunho de trabalho, e nenhum botão desta tela chega perto de um arquivo seu.",
+  "storage.thumbs": "Miniaturas",
+  "storage.thumbsCounts": "{dirs} pastas · {files} imagens",
+  "storage.thumbsHint":
+    "as prévias dos cards e da linha do tempo. Elas são identificadas por um número que só vale enquanto o app está aberto — então tudo que sobrou de vezes anteriores é lixo garantido, e até agora nada nunca apagava.",
+  "storage.oldThumbs": "Miniaturas de sessões anteriores",
+  "storage.oldThumbsCounts": "{n} pastas ({size})",
+  "storage.oldThumbsHint":
+    "nenhuma miniatura que está na tela agora sai daqui — a limpeza só toca no que é anterior a esta sessão E não está em uso.",
+  "storage.tmp": "Intermediários do ffmpeg",
+  "storage.tmpCounts": "{n} arquivos",
+  "storage.tmpHint":
+    "listas de junção e paletas de GIF. Cada um serve a uma conversão só; os de trabalho abortado nunca eram limpos.",
+  "storage.oldTmp": "Intermediários de sessões anteriores",
+  "storage.oldTmpCounts": "{n} arquivos ({size})",
+  "storage.oldTmpHint":
+    "nenhuma conversão em andamento é afetada: o que esta sessão criou fica.",
+  "storage.clear": "Limpar",
+  "storage.confirmTitle": "Confirmar limpeza",
+  "storage.confirmThumbs":
+    "Apagar as miniaturas de sessões anteriores? As desta sessão ficam, e as apagadas voltam sozinhas quando você abrir os arquivos de novo. Nenhum vídeo ou áudio seu é tocado.",
+  "storage.confirmTmp":
+    "Apagar os intermediários de sessões anteriores? Nenhuma conversão em andamento é afetada, e nenhum arquivo seu é tocado.",
+  "storage.confirmYes": "Sim, apagar",
+  "storage.cancel": "Cancelar",
+  "storage.freed": "Liberado {size} ({n} arquivos).",
+  "storage.nothing": "Nada pra limpar aqui.",
+  "storage.failed": "Falha na limpeza: {e}",
+  "storage.close": "Fechar",
 } as const;
 
 export type MessageKey = keyof typeof pt;
@@ -651,6 +687,41 @@ const en: Record<MessageKey, string> = {
   "job.burnSubs": "Burn subtitle",
   "job.muxSubs": "Attach subtitle",
   "job.tracks": "Adjust tracks",
+
+  "storage.title": "Data and storage",
+  "storage.open": "Data and storage",
+  "storage.path": "Data folder",
+  "storage.openFolder": "Open",
+  "storage.intro":
+    "LocalMedia keeps nothing of yours here: what you convert lands at the path you picked in the save dialog, and the editor project lives in your own file. Everything in this folder is working scratch, and no button on this screen goes anywhere near a file of yours.",
+  "storage.thumbs": "Thumbnails",
+  "storage.thumbsCounts": "{dirs} folders · {files} images",
+  "storage.thumbsHint":
+    "the previews on the cards and on the timeline. They are identified by a number that only lives while the app is open — so anything left over from previous runs is guaranteed garbage, and until now nothing ever deleted it.",
+  "storage.oldThumbs": "Thumbnails from earlier sessions",
+  "storage.oldThumbsCounts": "{n} folders ({size})",
+  "storage.oldThumbsHint":
+    "no thumbnail currently on screen goes with this — the cleanup only touches what predates this session AND is not in use.",
+  "storage.tmp": "ffmpeg intermediates",
+  "storage.tmpCounts": "{n} files",
+  "storage.tmpHint":
+    "join lists and GIF palettes. Each serves a single conversion; the ones from aborted jobs were never cleaned up.",
+  "storage.oldTmp": "Intermediates from earlier sessions",
+  "storage.oldTmpCounts": "{n} files ({size})",
+  "storage.oldTmpHint": "no conversion in progress is affected: what this session created stays.",
+  "storage.clear": "Clear",
+  "storage.confirmTitle": "Confirm cleanup",
+  "storage.confirmThumbs":
+    "Delete the thumbnails from earlier sessions? This session's stay, and the deleted ones come back on their own when you open those files again. None of your video or audio is touched.",
+  "storage.confirmTmp":
+    "Delete the intermediates from earlier sessions? No conversion in progress is affected, and no file of yours is touched.",
+  "storage.confirmYes": "Yes, delete",
+  "storage.cancel": "Cancel",
+  "storage.freed": "Freed {size} ({n} files).",
+  "storage.nothing": "Nothing to clean up here.",
+  "storage.failed": "Cleanup failed: {e}",
+  "storage.close": "Close",
+
 };
 
 const es: Record<MessageKey, string> = {
@@ -966,6 +1037,42 @@ const es: Record<MessageKey, string> = {
   "job.burnSubs": "Incrustar subtítulo",
   "job.muxSubs": "Adjuntar subtítulo",
   "job.tracks": "Ajustar pistas",
+
+  "storage.title": "Datos y almacenamiento",
+  "storage.open": "Datos y almacenamiento",
+  "storage.path": "Carpeta de datos",
+  "storage.openFolder": "Abrir",
+  "storage.intro":
+    "LocalMedia no guarda nada tuyo aquí: lo que conviertes sale en la ruta que elegiste en el diálogo de guardar, y el proyecto del editor vive en tu propio archivo. Todo en esta carpeta es borrador de trabajo, y ningún botón de esta pantalla se acerca a un archivo tuyo.",
+  "storage.thumbs": "Miniaturas",
+  "storage.thumbsCounts": "{dirs} carpetas · {files} imágenes",
+  "storage.thumbsHint":
+    "las vistas previas de las tarjetas y de la línea de tiempo. Se identifican con un número que solo vale mientras la app está abierta — así que todo lo que quedó de veces anteriores es basura garantizada, y hasta ahora nada lo borraba.",
+  "storage.oldThumbs": "Miniaturas de sesiones anteriores",
+  "storage.oldThumbsCounts": "{n} carpetas ({size})",
+  "storage.oldThumbsHint":
+    "ninguna miniatura que esté en pantalla ahora se va de aquí — la limpieza solo toca lo anterior a esta sesión Y que no esté en uso.",
+  "storage.tmp": "Intermedios de ffmpeg",
+  "storage.tmpCounts": "{n} archivos",
+  "storage.tmpHint":
+    "listas de unión y paletas de GIF. Cada uno sirve a una sola conversión; los de trabajos abortados nunca se limpiaban.",
+  "storage.oldTmp": "Intermedios de sesiones anteriores",
+  "storage.oldTmpCounts": "{n} archivos ({size})",
+  "storage.oldTmpHint":
+    "ninguna conversión en curso se ve afectada: lo que creó esta sesión se queda.",
+  "storage.clear": "Limpiar",
+  "storage.confirmTitle": "Confirmar limpieza",
+  "storage.confirmThumbs":
+    "¿Borrar las miniaturas de sesiones anteriores? Las de esta sesión se quedan, y las borradas vuelven solas cuando abras esos archivos de nuevo. Ninguno de tus videos o audios se toca.",
+  "storage.confirmTmp":
+    "¿Borrar los intermedios de sesiones anteriores? Ninguna conversión en curso se ve afectada, y ningún archivo tuyo se toca.",
+  "storage.confirmYes": "Sí, borrar",
+  "storage.cancel": "Cancelar",
+  "storage.freed": "Liberado {size} ({n} archivos).",
+  "storage.nothing": "Nada que limpiar aquí.",
+  "storage.failed": "Error en la limpieza: {e}",
+  "storage.close": "Cerrar",
+
 };
 
 const DICTS: Record<Locale, Record<MessageKey, string>> = { pt, en, es };

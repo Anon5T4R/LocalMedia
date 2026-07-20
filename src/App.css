@@ -1367,3 +1367,69 @@ input[type="radio"] {
 ::-webkit-scrollbar-track {
   background: transparent;
 }
+
+/* ---------- dados e armazenamento (B11) ---------- */
+
+.storage-modal {
+  max-width: 680px;
+  max-height: 84vh;
+  overflow-y: auto;
+}
+.storage-intro {
+  font-size: 12.5px;
+  color: var(--text-dim);
+  line-height: 1.5;
+  margin: 4px 0 12px;
+}
+.storage-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--border);
+}
+.storage-row:last-child {
+  border-bottom: none;
+}
+.storage-label {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+.storage-label small {
+  color: var(--text-dim);
+  font-size: 12px;
+  line-height: 1.45;
+}
+.storage-row .btn {
+  flex: none;
+  white-space: nowrap;
+  align-self: center;
+}
+.storage-dir {
+  font-size: 12px;
+  color: var(--text-dim);
+  word-break: break-all;
+}
+.storage-confirm {
+  margin-top: 14px;
+  padding: 12px 14px;
+  border: 1px solid var(--danger);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--danger) 8%, transparent);
+}
+.storage-confirm p {
+  margin: 6px 0 10px;
+  font-size: 13px;
+}
+.storage-confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.btn.danger {
+  border-color: var(--danger);
+  color: var(--danger);
+}

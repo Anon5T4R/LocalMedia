@@ -1,4 +1,5 @@
 mod ffmpeg;
+mod storage;
 
 use tauri::Manager;
 
@@ -19,6 +20,10 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
         .manage(ffmpeg::FfState::default())
+        // Carimba o início da sessão. É metade do critério de "sobra": id de
+        // miniatura não é persistido, então pasta anterior a este instante não
+        // tem como ser referenciada por ninguém.
+        .manage(storage::StartedAt::default())
         .invoke_handler(tauri::generate_handler![
             ffmpeg::ffmpeg_ok,
             ffmpeg::media_probe,
@@ -29,7 +34,10 @@ pub fn run() {
             ffmpeg::concat_list,
             ffmpeg::tmp_path,
             ffmpeg::write_text_file,
-            ffmpeg::read_text_file
+            ffmpeg::read_text_file,
+            storage::storage_info,
+            storage::storage_clear_old_thumbs,
+            storage::storage_clear_old_tmp
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")
