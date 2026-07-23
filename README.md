@@ -31,6 +31,12 @@ Parte da suíte **Local/Taylor** de aplicativos offline-first. Instale pelo
 
 ## Editor (timeline multi-faixa)
 
+> **Modo manutenção (2026-07):** o editor continua funcionando e recebendo consertos,
+> e os projetos continuam abrindo — mas feature nova de edição vai pro
+> [LocalVideo](https://github.com/Anon5T4R/LocalVideo), o editor da suíte (transições,
+> keyframes, corte por quadro, prévia quadro a quadro). O LocalMedia segue sendo o
+> utilitário: converter, comprimir, cortar, legendas, faixas e lote.
+
 A aba **Editor** monta um projeto com vídeos, imagens e áudios juntos, com o jeito de
 usar dos editores profissionais:
 

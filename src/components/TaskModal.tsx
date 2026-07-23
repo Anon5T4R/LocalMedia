@@ -22,21 +22,12 @@ import {
   type PresetId,
   type Rotation,
 } from "../lib/presets";
-import { t, type MessageKey } from "../lib/i18n";
+import { availableActions } from "../lib/capabilities";
+import { t } from "../lib/i18n";
 import { fmtBytes } from "../lib/time";
 import { SUBTITLE_EXTENSIONS, type MediaFile } from "../lib/types";
 import { suggestOut, useStore } from "../state/store";
 import { useUi } from "../state/ui";
-
-const TABS: [string, MessageKey][] = [
-  ["converter", "action.convert"],
-  ["comprimir", "action.compress"],
-  ["cortar", "action.cut"],
-  ["gif", "action.gif"],
-  ["legendas", "action.subs"],
-  ["faixas", "action.tracks"],
-  ["ajustes", "action.adjust"],
-];
 
 import CutRange from "./CutRange";
 
@@ -51,11 +42,7 @@ export default function TaskModal() {
   const file = files.find((f) => f.id === fileId);
   if (!file) return null;
 
-  const tabs = TABS.filter(([id]) => {
-    if (!file.info.video && (id === "comprimir" || id === "gif" || id === "legendas")) return false;
-    if (id === "faixas" && file.info.audio.length + file.info.subs.length < 2) return false;
-    return true;
-  });
+  const tabs = availableActions(file.info);
 
   async function submit(built: BuiltJob) {
     if (!file) return;
@@ -80,13 +67,13 @@ export default function TaskModal() {
           </button>
         </div>
         <div className="tabs">
-          {tabs.map(([id, label]) => (
+          {tabs.map((a) => (
             <button
-              key={id}
-              className={`tab ${tab === id ? "active" : ""}`}
-              onClick={() => openTask(file.id, id)}
+              key={a.id}
+              className={`tab ${tab === a.id ? "active" : ""}`}
+              onClick={() => openTask(file.id, a.id)}
             >
-              {t(label)}
+              {t(a.label)}
             </button>
           ))}
         </div>

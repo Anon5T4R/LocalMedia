@@ -28,6 +28,7 @@ const TIPS: MessageKey[] = [
   "help.tip7",
   "help.tip8",
   "help.tip9",
+  "help.tip10",
 ];
 
 export default function HelpModal() {

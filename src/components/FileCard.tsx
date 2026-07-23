@@ -1,18 +1,10 @@
 import { convertFileSrc } from "@tauri-apps/api/core";
-import { t, type MessageKey } from "../lib/i18n";
+import { availableActions } from "../lib/capabilities";
+import { t } from "../lib/i18n";
 import { fmtBytes, fmtDur } from "../lib/time";
 import type { MediaFile } from "../lib/types";
 import { useStore } from "../state/store";
 import { useUi } from "../state/ui";
-
-const ACTIONS: [string, MessageKey][] = [
-  ["converter", "action.convert"],
-  ["comprimir", "action.compress"],
-  ["cortar", "action.cut"],
-  ["gif", "action.gif"],
-  ["faixas", "action.tracks"],
-  ["ajustes", "action.adjust"],
-];
 
 export default function FileCard({ file }: { file: MediaFile }) {
   const removeFile = useStore((s) => s.removeFile);
@@ -20,11 +12,7 @@ export default function FileCard({ file }: { file: MediaFile }) {
   const openTask = useUi((s) => s.openTask);
   const { info } = file;
 
-  const available = ACTIONS.filter(([tab]) => {
-    if (!info.video && (tab === "comprimir" || tab === "gif")) return false;
-    if (tab === "faixas" && info.audio.length + info.subs.length < 2) return false;
-    return true;
-  });
+  const available = availableActions(info);
 
   return (
     <div className={`file-card ${file.selected ? "selected" : ""}`}>
@@ -62,9 +50,9 @@ export default function FileCard({ file }: { file: MediaFile }) {
           )}
         </div>
         <div className="file-actions">
-          {available.map(([tab, label]) => (
-            <button key={tab} className="btn small" onClick={() => openTask(file.id, tab)}>
-              {t(label)}
+          {available.map((a) => (
+            <button key={a.id} className="btn small" onClick={() => openTask(file.id, a.id)}>
+              {t(a.label)}
             </button>
           ))}
         </div>

@@ -71,6 +71,15 @@ export default function TopBar({ theme, onChangeTheme }: Props) {
             {t("topbar.batch")}
           </button>
         )}
+        {view === "home" && (
+          <button
+            className="btn"
+            onClick={() => useUi.getState().setHelpOpen(true)}
+            title={t("home.helpBtnTitle")}
+          >
+            ?
+          </button>
+        )}
         <button
           className="btn"
           onClick={() => setStorageOpen(true)}

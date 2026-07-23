@@ -68,6 +68,36 @@ const pt = {
   "home.batchConvert": "Converter em lote…",
   "home.openInEditor": "Abrir no editor",
   "home.clearSelection": "Limpar seleção",
+  "home.helpTitle": "O que o LocalMedia faz",
+  "home.helpCaps": "Funções",
+  "home.helpBtnTitle": "O que o app faz e como chegar em cada função (? ou F1)",
+  "home.emptyHelpHint": "? (ou F1) mostra o caminho até cada função.",
+
+  "cap.convert.desc": "presets prontos — MP4 web, WhatsApp, WebM, só o áudio (MP3/Opus), WAV pra transcrição",
+  "cap.compress.desc": "aperta o arquivo por qualidade (CRF), com estimativa de tamanho",
+  "cap.cut.desc": "recorta um trecho — sem trocar codec é instantâneo e sem perda",
+  "cap.gif.desc": "GIF de um trecho, em 2 passes (cores bem melhores)",
+  "cap.subs.desc": "queima .srt/.vtt/.ass no vídeo ou anexa como faixa — o LocalScribe gera o .srt",
+  "cap.tracks.desc": "remove/escolhe áudios e legendas de um MKV/MP4 sem recodificar",
+  "cap.adjust.desc": "redimensionar, rotacionar e normalizar volume (EBU R128)",
+  "cap.join.label": "Juntar clipes",
+  "cap.join.desc": "emenda arquivos do mesmo formato sem recodificar",
+  "cap.batch.desc": "o mesmo preset aplicado em vários arquivos de uma vez",
+  "cap.editor.desc": "timeline multi-faixa pra montagens rápidas — camadas, títulos, música",
+  "cap.how.card": "botões no card do arquivo",
+  "cap.how.tracks": "botão no card, quando o arquivo tem mais de uma faixa",
+  "cap.how.select": "marque arquivos pelo checkbox da miniatura — a barra aparece embaixo",
+  "cap.how.tab": "aba Editor, no topo da janela",
+
+  "hh.tip.select":
+    "O checkbox na miniatura de cada card é o que libera Juntar e Lote: marque 2+ arquivos e a barra de seleção aparece embaixo.",
+  "hh.tip.drop": "Dá pra arrastar arquivos direto pra janela, em qualquer tela.",
+  "hh.tip.queue":
+    "Toda operação entra na Fila (canto de baixo), com progresso real, velocidade e cancelamento; no fim, “Mostrar na pasta”.",
+  "hh.tip.scribe":
+    "Ponte com o LocalScribe: o preset “Áudio pra transcrição” gera o WAV que ele ouve, e o .srt que ele transcreve volta pra cá em Legendas.",
+  "hh.tip.editor":
+    "O Editor segue funcionando e recebendo consertos, mas as novidades de edição vão pro LocalVideo — o editor da suíte.",
 
   "filecard.tracksCount": "({n} faixas)",
   "filecard.removeTitle": "Remover da lista",
@@ -268,6 +298,11 @@ const pt = {
     "O projeto se salva sozinho como rascunho (volta ao abrir o app). 💾 salva num arquivo .json pra guardar ou levar; 📂 abre.",
   "help.tip9":
     "A exportação junta tudo num MP4 (H.264/AAC) — escolha a qualidade no painel do projeto (sem clipe selecionado).",
+  "help.tip10":
+    "Este editor está em modo manutenção: segue funcionando, mas transições, keyframes e corte por quadro moram no LocalVideo — o editor da suíte.",
+
+  "ed.frozenNote":
+    "Modo manutenção: o editor continua funcionando (e seus projetos continuam abrindo), mas edição séria — transições, keyframes, corte por quadro — é com o LocalVideo, o editor da suíte.",
 
   "tl.trackHidden": "Trilha oculta — clique pra mostrar",
   "tl.trackHide": "Ocultar trilha (fica fora do preview e da exportação)",
@@ -421,6 +456,36 @@ const en: Record<MessageKey, string> = {
   "home.batchConvert": "Batch convert…",
   "home.openInEditor": "Open in editor",
   "home.clearSelection": "Clear selection",
+  "home.helpTitle": "What LocalMedia does",
+  "home.helpCaps": "Features",
+  "home.helpBtnTitle": "What the app does and how to reach each feature (? or F1)",
+  "home.emptyHelpHint": "? (or F1) shows the way to every feature.",
+
+  "cap.convert.desc": "ready presets — MP4 web, WhatsApp, WebM, audio only (MP3/Opus), WAV for transcription",
+  "cap.compress.desc": "squeezes the file by quality (CRF), with a size estimate",
+  "cap.cut.desc": "trims a section — without changing codec it's instant and lossless",
+  "cap.gif.desc": "GIF of a section, in 2 passes (much better colors)",
+  "cap.subs.desc": "burns .srt/.vtt/.ass into the video or attaches it as a track — LocalScribe makes the .srt",
+  "cap.tracks.desc": "removes/picks audio and subtitle tracks of an MKV/MP4 without re-encoding",
+  "cap.adjust.desc": "resize, rotate and normalize volume (EBU R128)",
+  "cap.join.label": "Join clips",
+  "cap.join.desc": "splices same-format files without re-encoding",
+  "cap.batch.desc": "the same preset applied to several files at once",
+  "cap.editor.desc": "multi-track timeline for quick assemblies — layers, titles, music",
+  "cap.how.card": "buttons on the file card",
+  "cap.how.tracks": "button on the card, when the file has more than one track",
+  "cap.how.select": "tick files by the thumbnail checkbox — the bar shows up at the bottom",
+  "cap.how.tab": "Editor tab, at the top of the window",
+
+  "hh.tip.select":
+    "The checkbox on each card's thumbnail is what unlocks Join and Batch: tick 2+ files and the selection bar shows up at the bottom.",
+  "hh.tip.drop": "You can drag files straight onto the window, on any screen.",
+  "hh.tip.queue":
+    "Every operation goes into the Queue (bottom corner), with real progress, speed and cancelling; when done, “Show in folder”.",
+  "hh.tip.scribe":
+    "Bridge with LocalScribe: the “Audio for transcription” preset makes the WAV it listens to, and the .srt it transcribes comes back here under Subtitles.",
+  "hh.tip.editor":
+    "The Editor keeps working and getting fixes, but new editing features go to LocalVideo — the suite's editor.",
 
   "filecard.tracksCount": "({n} tracks)",
   "filecard.removeTitle": "Remove from the list",
@@ -621,6 +686,11 @@ const en: Record<MessageKey, string> = {
     "The project saves itself as a draft (it comes back when you open the app). 💾 saves to a .json file to keep or move; 📂 opens.",
   "help.tip9":
     "Export merges everything into an MP4 (H.264/AAC) — pick the quality in the project panel (no clip selected).",
+  "help.tip10":
+    "This editor is in maintenance mode: it keeps working, but transitions, keyframes and frame-exact cutting live in LocalVideo — the suite's editor.",
+
+  "ed.frozenNote":
+    "Maintenance mode: the editor keeps working (and your projects keep opening), but serious editing — transitions, keyframes, frame-exact cuts — belongs to LocalVideo, the suite's editor.",
 
   "tl.trackHidden": "Track hidden — click to show",
   "tl.trackHide": "Hide track (left out of the preview and the export)",
@@ -771,6 +841,36 @@ const es: Record<MessageKey, string> = {
   "home.batchConvert": "Convertir por lotes…",
   "home.openInEditor": "Abrir en el editor",
   "home.clearSelection": "Limpiar selección",
+  "home.helpTitle": "Qué hace LocalMedia",
+  "home.helpCaps": "Funciones",
+  "home.helpBtnTitle": "Qué hace la app y cómo llegar a cada función (? o F1)",
+  "home.emptyHelpHint": "? (o F1) muestra el camino a cada función.",
+
+  "cap.convert.desc": "presets listos — MP4 web, WhatsApp, WebM, solo el audio (MP3/Opus), WAV para transcripción",
+  "cap.compress.desc": "aprieta el archivo por calidad (CRF), con estimación de tamaño",
+  "cap.cut.desc": "recorta un fragmento — sin cambiar códec es instantáneo y sin pérdida",
+  "cap.gif.desc": "GIF de un fragmento, en 2 pasadas (colores mucho mejores)",
+  "cap.subs.desc": "incrusta .srt/.vtt/.ass en el vídeo o lo adjunta como pista — LocalScribe genera el .srt",
+  "cap.tracks.desc": "quita/elige audios y subtítulos de un MKV/MP4 sin recodificar",
+  "cap.adjust.desc": "redimensionar, rotar y normalizar volumen (EBU R128)",
+  "cap.join.label": "Unir clips",
+  "cap.join.desc": "empalma archivos del mismo formato sin recodificar",
+  "cap.batch.desc": "el mismo preset aplicado a varios archivos a la vez",
+  "cap.editor.desc": "timeline multipista para montajes rápidos — capas, títulos, música",
+  "cap.how.card": "botones en la tarjeta del archivo",
+  "cap.how.tracks": "botón en la tarjeta, cuando el archivo tiene más de una pista",
+  "cap.how.select": "marca archivos con el checkbox de la miniatura — la barra aparece abajo",
+  "cap.how.tab": "pestaña Editor, arriba de la ventana",
+
+  "hh.tip.select":
+    "El checkbox en la miniatura de cada tarjeta es lo que desbloquea Unir y Lote: marca 2+ archivos y la barra de selección aparece abajo.",
+  "hh.tip.drop": "Puedes arrastrar archivos directo a la ventana, en cualquier pantalla.",
+  "hh.tip.queue":
+    "Toda operación entra en la Cola (esquina de abajo), con progreso real, velocidad y cancelación; al final, “Mostrar en la carpeta”.",
+  "hh.tip.scribe":
+    "Puente con LocalScribe: el preset “Audio para transcripción” genera el WAV que él escucha, y el .srt que él transcribe vuelve aquí en Subtítulos.",
+  "hh.tip.editor":
+    "El Editor sigue funcionando y recibiendo arreglos, pero las novedades de edición van a LocalVideo — el editor de la suite.",
 
   "filecard.tracksCount": "({n} pistas)",
   "filecard.removeTitle": "Quitar de la lista",
@@ -971,6 +1071,11 @@ const es: Record<MessageKey, string> = {
     "El proyecto se guarda solo como borrador (vuelve al abrir la app). 💾 guarda en un archivo .json para conservar o llevar; 📂 abre.",
   "help.tip9":
     "La exportación junta todo en un MP4 (H.264/AAC) — elige la calidad en el panel del proyecto (sin clip seleccionado).",
+  "help.tip10":
+    "Este editor está en modo mantenimiento: sigue funcionando, pero las transiciones, keyframes y el corte por fotograma viven en LocalVideo — el editor de la suite.",
+
+  "ed.frozenNote":
+    "Modo mantenimiento: el editor sigue funcionando (y tus proyectos siguen abriendo), pero la edición seria — transiciones, keyframes, corte por fotograma — es cosa de LocalVideo, el editor de la suite.",
 
   "tl.trackHidden": "Pista oculta — haz clic para mostrar",
   "tl.trackHide": "Ocultar pista (queda fuera de la vista previa y la exportación)",

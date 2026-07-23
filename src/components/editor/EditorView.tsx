@@ -218,6 +218,7 @@ export default function EditorView() {
         <div className="editor-empty" onClick={() => void pickMedia()}>
           <div className="drop-icon">🎞️</div>
           <p>{t("ed.emptyText")}</p>
+          <p className="editor-frozen-note">{t("ed.frozenNote")}</p>
         </div>
       ) : (
         <Timeline />

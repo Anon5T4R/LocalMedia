@@ -1,5 +1,7 @@
+import { useEffect } from "react";
 import { open, save } from "@tauri-apps/plugin-dialog";
 import * as be from "../lib/backend";
+import { CAPABILITIES } from "../lib/capabilities";
 import { t } from "../lib/i18n";
 import { buildConcat, concatCompatible } from "../lib/presets";
 import { MEDIA_EXTENSIONS } from "../lib/types";
@@ -7,6 +9,7 @@ import { useEditor } from "../state/editor";
 import { useStore } from "../state/store";
 import { useUi } from "../state/ui";
 import FileCard from "./FileCard";
+import HomeHelpModal from "./HomeHelpModal";
 import QueuePanel from "./QueuePanel";
 
 export default function HomeView() {
@@ -20,6 +23,22 @@ export default function HomeView() {
   const setView = useUi((s) => s.setView);
 
   const selected = files.filter((f) => f.selected);
+
+  // ? / F1 abrem a ajuda (mesmo padrão do editor; só uma view monta por vez).
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      const el = e.target as HTMLElement;
+      if (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.tagName === "SELECT") return;
+      if (e.key === "?" || e.key === "F1") {
+        e.preventDefault();
+        useUi.getState().setHelpOpen(!useUi.getState().helpOpen);
+      } else if (e.key === "Escape" && useUi.getState().helpOpen) {
+        useUi.getState().setHelpOpen(false);
+      }
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
 
   async function pickFiles() {
     const picked = await open({
@@ -72,6 +91,15 @@ export default function HomeView() {
           <div className="drop-icon">🎬</div>
           <h1>{t("home.emptyTitle")}</h1>
           <p className="home-sub">{t("home.emptySub")}</p>
+          <div className="cap-grid">
+            {CAPABILITIES.map((c) => (
+              <span key={c.id} className="cap-chip" title={`${t(c.desc)} · ${t(c.how)}`}>
+                <span className="cap-icon">{c.icon}</span>
+                {t(c.label)}
+              </span>
+            ))}
+          </div>
+          <p className="empty-help-hint">{t("home.emptyHelpHint")}</p>
         </div>
       ) : (
         <>
@@ -119,6 +147,7 @@ export default function HomeView() {
       )}
 
       <QueuePanel />
+      <HomeHelpModal />
     </div>
   );
 }
