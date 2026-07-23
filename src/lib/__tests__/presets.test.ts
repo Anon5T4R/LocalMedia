@@ -4,14 +4,28 @@ import {
   buildConcat,
   buildConvert,
   buildCut,
+  buildCutSilence,
   buildGif,
+  buildHideRegion,
   buildMuxSubs,
   buildTracks,
+  buildWatermark,
   concatCompatible,
   estimateCompress,
   ffTime,
 } from "../presets";
 import type { MediaInfo } from "../types";
+
+const audio: MediaInfo = {
+  path: "C:\\a\\voz.mp3",
+  name: "voz.mp3",
+  sizeBytes: 5_000_000,
+  durationMs: 120_000,
+  container: "mp3",
+  video: null,
+  audio: [{ index: 0, codec: "mp3", channels: 2, lang: "", title: "" }],
+  subs: [],
+};
 
 const video: MediaInfo = {
   path: "C:\\v\\filme.mkv",
@@ -163,5 +177,61 @@ describe("estimateCompress", () => {
     const s = 100_000_000;
     expect(estimateCompress(s, 20)).toBeGreaterThan(estimateCompress(s, 28));
     expect(estimateCompress(s, 18)).toBeLessThanOrEqual(s);
+  });
+});
+
+describe("buildWatermark (logo)", () => {
+  it("dois inputs, overlay no canto pedido, áudio copiado", () => {
+    const b = buildWatermark(video, "C:\\l\\logo.png", "tr", 0.15, 0.8);
+    const args = b.steps[0];
+    // Vídeo é o input 0, logo o 1.
+    expect(args[args.indexOf("-i") + 1]).toBe(video.path);
+    expect(args.lastIndexOf("-i")).toBeGreaterThan(args.indexOf("-i"));
+    expect(args[args.lastIndexOf("-i") + 1]).toBe("C:\\l\\logo.png");
+    const fc = args[args.indexOf("-filter_complex") + 1];
+    // Canto superior direito: encosta na direita e no topo, com margem.
+    expect(fc).toContain("overlay=main_w-overlay_w-");
+    // Logo escalado pra 15% da largura (1920*0.15 = 288) e opacidade 0.8.
+    expect(fc).toContain("scale=288:-1");
+    expect(fc).toContain("colorchannelmixer=aa=0.800");
+    expect(args).toContain("copy"); // -c:a copy
+  });
+
+  it("centro usa expressão centralizada", () => {
+    const fc = buildWatermark(video, "l.png", "center", 0.2, 1).steps[0].join(" ");
+    expect(fc).toContain("overlay=(main_w-overlay_w)/2:(main_h-overlay_h)/2");
+  });
+});
+
+describe("buildHideRegion (esconder logo — delogo, não remove)", () => {
+  it("usa delogo com a região no canto, respeitando a borda de 1px", () => {
+    const b = buildHideRegion(video, "br", 0.2, 0.12);
+    const vf = b.steps[0][b.steps[0].indexOf("-vf") + 1];
+    expect(vf).toMatch(/^delogo=x=\d+:y=\d+:w=\d+:h=\d+$/);
+    // Canto inferior direito de 1920×1080: x/y positivos, dentro do quadro.
+    const m = vf.match(/x=(\d+):y=(\d+):w=(\d+):h=(\d+)/)!;
+    const [x, y, w, h] = m.slice(1).map(Number);
+    expect(x + w).toBeLessThanOrEqual(1919); // 1px de borda à direita
+    expect(y + h).toBeLessThanOrEqual(1079);
+    expect(x).toBeGreaterThanOrEqual(1);
+    expect(y).toBeGreaterThanOrEqual(1);
+  });
+});
+
+describe("buildCutSilence (só áudio — no vídeo dessincronizaria)", () => {
+  it("silenceremove com o threshold pedido, sem vídeo", () => {
+    const b = buildCutSilence(audio, -45);
+    const args = b.steps[0];
+    expect(args).toContain("-vn");
+    const af = args[args.indexOf("-af") + 1];
+    expect(af).toContain("silenceremove");
+    expect(af).toContain("start_threshold=-45dB");
+    expect(af).toContain("stop_threshold=-45dB");
+    expect(b.ext).toBe("mp3");
+  });
+
+  it("threshold é grampeado pra faixa sã", () => {
+    expect(buildCutSilence(audio, -999).steps[0].join(" ")).toContain("-80dB");
+    expect(buildCutSilence(audio, 5).steps[0].join(" ")).toContain("-10dB");
   });
 });

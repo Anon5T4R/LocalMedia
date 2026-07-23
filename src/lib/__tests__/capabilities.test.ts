@@ -19,20 +19,27 @@ function info(over: Partial<MediaInfo> = {}): MediaInfo {
 const ids = (list: { id: string }[]) => list.map((a) => a.id);
 
 describe("availableActions", () => {
-  it("vídeo comum: todas as ações menos faixas (1 faixa só não dá escolha)", () => {
+  it("vídeo comum: todas as de vídeo, sem faixas (1 faixa) nem silêncio (é vídeo)", () => {
     expect(ids(availableActions(info()))).toEqual([
       "converter",
       "comprimir",
       "cortar",
       "gif",
       "legendas",
+      "logo",
+      "esconder",
       "ajustes",
     ]);
   });
 
-  it("só áudio: some o que precisa de vídeo (comprimir, gif, legendas)", () => {
+  it("só áudio: some o que precisa de vídeo; ENTRA cortar silêncio", () => {
     const a = availableActions(info({ video: null }));
-    expect(ids(a)).toEqual(["converter", "cortar", "ajustes"]);
+    expect(ids(a)).toEqual(["converter", "cortar", "silencio", "ajustes"]);
+  });
+
+  it("cortar silêncio NÃO aparece em vídeo (dessincronizaria) nem em áudio mudo", () => {
+    expect(ids(availableActions(info()))).not.toContain("silencio");
+    expect(ids(availableActions(info({ video: null, audio: [] })))).not.toContain("silencio");
   });
 
   it("MKV com 2 áudios: faixas aparece", () => {

@@ -385,6 +385,42 @@ input[type="radio"] {
   font-size: 12.5px;
   color: var(--text-dim);
 }
+.corner-pick {
+  display: grid;
+  grid-template-columns: repeat(3, 40px);
+  grid-template-rows: repeat(2, 40px);
+  gap: 6px;
+}
+/* Cinco botões num arranjo espacial: cantos nas pontas, centro no meio de cima. */
+.corner-btn {
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--text-dim);
+  font-size: 16px;
+  cursor: pointer;
+  transition: border-color 0.12s, background 0.12s, color 0.12s;
+}
+.corner-btn:hover {
+  border-color: var(--accent);
+}
+.corner-btn.active {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--text);
+}
+.corner-btn:nth-child(3) {
+  grid-column: 2;
+  grid-row: 1;
+}
+.corner-btn:nth-child(4) {
+  grid-column: 1;
+  grid-row: 2;
+}
+.corner-btn:nth-child(5) {
+  grid-column: 3;
+  grid-row: 2;
+}
 .help-caps {
   display: flex;
   flex-direction: column;

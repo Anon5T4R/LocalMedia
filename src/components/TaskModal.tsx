@@ -10,12 +10,16 @@ import {
   buildCompress,
   buildConvert,
   buildCut,
+  buildCutSilence,
   buildGif,
+  buildHideRegion,
   buildLoudnorm,
   buildMuxSubs,
   buildResize,
   buildRotate,
   buildTracks,
+  buildWatermark,
+  type Corner,
   estimateCompress,
   PRESETS,
   type BuiltJob,
@@ -23,9 +27,9 @@ import {
   type Rotation,
 } from "../lib/presets";
 import { availableActions } from "../lib/capabilities";
-import { t } from "../lib/i18n";
+import { t, type MessageKey } from "../lib/i18n";
 import { fmtBytes } from "../lib/time";
-import { SUBTITLE_EXTENSIONS, type MediaFile } from "../lib/types";
+import { IMAGE_EXTENSIONS, SUBTITLE_EXTENSIONS, type MediaFile } from "../lib/types";
 import { suggestOut, useStore } from "../state/store";
 import { useUi } from "../state/ui";
 
@@ -80,8 +84,11 @@ export default function TaskModal() {
         {tab === "converter" && <ConvertTab file={file} onSubmit={submit} />}
         {tab === "comprimir" && <CompressTab file={file} onSubmit={submit} />}
         {tab === "cortar" && <CutTab file={file} onSubmit={submit} />}
+        {tab === "silencio" && <SilenceTab file={file} onSubmit={submit} />}
         {tab === "gif" && <GifTab file={file} onSubmit={submit} />}
         {tab === "legendas" && <SubsTab file={file} onSubmit={submit} />}
+        {tab === "logo" && <WatermarkTab file={file} onSubmit={submit} />}
+        {tab === "esconder" && <HideTab file={file} onSubmit={submit} />}
         {tab === "faixas" && <TracksTab file={file} onSubmit={submit} />}
         {tab === "ajustes" && <AdjustTab file={file} onSubmit={submit} />}
       </div>
@@ -482,6 +489,148 @@ function AdjustTab({ file, onSubmit }: TabProps) {
         <span />
         <button className="btn" onClick={() => void onSubmit(buildLoudnorm(file.info))}>
           {t("common.apply")}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/** Seletor de canto compartilhado (logo e esconder-logo). Cinco botões com
+ *  símbolo — a posição diz em qualquer idioma onde a coisa fica. */
+const CORNERS: [Corner, string, MessageKey][] = [
+  ["tl", "◤", "task.cornerTL"],
+  ["tr", "◥", "task.cornerTR"],
+  ["center", "◉", "task.cornerCenter"],
+  ["bl", "◣", "task.cornerBL"],
+  ["br", "◢", "task.cornerBR"],
+];
+function CornerPicker({ corner, onPick }: { corner: Corner; onPick: (c: Corner) => void }) {
+  return (
+    <div className="corner-pick">
+      {CORNERS.map(([c, sym, label]) => (
+        <button
+          key={c}
+          className={`corner-btn ${corner === c ? "active" : ""}`}
+          title={t(label)}
+          aria-label={t(label)}
+          aria-pressed={corner === c}
+          onClick={() => onPick(c)}
+        >
+          {sym}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function WatermarkTab({ file, onSubmit }: TabProps) {
+  const [logo, setLogo] = useState("");
+  const [corner, setCorner] = useState<Corner>("br");
+  const [size, setSize] = useState(0.18);
+  const [opacity, setOpacity] = useState(0.85);
+  const toast = useUi((s) => s.toast);
+  const logoName = logo.split(/[\\/]/).pop() ?? "";
+
+  async function pickLogo() {
+    const picked = await open({
+      multiple: false,
+      title: t("task.logoPick"),
+      filters: [{ name: t("task.logoFilter"), extensions: IMAGE_EXTENSIONS }],
+    }).catch(() => null);
+    if (picked && !Array.isArray(picked)) setLogo(picked);
+  }
+
+  function apply() {
+    if (!logo) {
+      toast("error", t("task.logoPickFirst"));
+      return;
+    }
+    void onSubmit(buildWatermark(file.info, logo, corner, size, opacity));
+  }
+
+  return (
+    <div className="tab-body">
+      <p className="card-hint">{t("task.logoHint")}</p>
+      <label className="field">
+        <span>{t("task.logoFile")}</span>
+        <button className="btn small" onClick={() => void pickLogo()}>
+          {logo ? logoName : t("task.choose")}
+        </button>
+      </label>
+      <div className="track-group">
+        <div className="track-title">{t("task.position")}</div>
+        <CornerPicker corner={corner} onPick={setCorner} />
+      </div>
+      <label className="field">
+        <span>
+          {t("task.logoSize")} <b>{Math.round(size * 100)}%</b>
+        </span>
+        <input type="range" min={0.05} max={0.5} step={0.01} value={size} onChange={(e) => setSize(Number(e.target.value))} />
+      </label>
+      <label className="field">
+        <span>
+          {t("task.logoOpacity")} <b>{Math.round(opacity * 100)}%</b>
+        </span>
+        <input type="range" min={0.1} max={1} step={0.05} value={opacity} onChange={(e) => setOpacity(Number(e.target.value))} />
+      </label>
+      <div className="tab-foot">
+        <button className="btn primary" onClick={apply}>
+          {t("task.logoBtn")}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function HideTab({ file, onSubmit }: TabProps) {
+  const [corner, setCorner] = useState<Corner>("tr");
+  const [w, setW] = useState(0.18);
+  const [h, setH] = useState(0.12);
+  return (
+    <div className="tab-body">
+      <p className="card-hint">
+        <b>{t("task.hideWarn")}</b> {t("task.hideHint")}
+      </p>
+      <div className="track-group">
+        <div className="track-title">{t("task.hideWhere")}</div>
+        <CornerPicker corner={corner} onPick={setCorner} />
+      </div>
+      <label className="field">
+        <span>
+          {t("task.hideW")} <b>{Math.round(w * 100)}%</b>
+        </span>
+        <input type="range" min={0.05} max={0.6} step={0.01} value={w} onChange={(e) => setW(Number(e.target.value))} />
+      </label>
+      <label className="field">
+        <span>
+          {t("task.hideH")} <b>{Math.round(h * 100)}%</b>
+        </span>
+        <input type="range" min={0.05} max={0.6} step={0.01} value={h} onChange={(e) => setH(Number(e.target.value))} />
+      </label>
+      <div className="tab-foot">
+        <button className="btn primary" onClick={() => void onSubmit(buildHideRegion(file.info, corner, w, h))}>
+          {t("task.hideBtn")}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function SilenceTab({ file, onSubmit }: TabProps) {
+  const [threshold, setThreshold] = useState(-45);
+  return (
+    <div className="tab-body">
+      <p className="card-hint">{t("task.silenceHint")}</p>
+      <div className="crf-row">
+        <span>−60 dB</span>
+        <input type="range" min={-60} max={-20} step={1} value={threshold} onChange={(e) => setThreshold(Number(e.target.value))} />
+        <span>−20 dB</span>
+        <b className="crf-value">{threshold} dB</b>
+      </div>
+      <div className="card-hint">{t("task.silenceThresholdHint")}</div>
+      <div className="tab-foot">
+        <button className="btn primary" onClick={() => void onSubmit(buildCutSilence(file.info, threshold))}>
+          {t("task.silenceBtn")}
         </button>
       </div>
     </div>

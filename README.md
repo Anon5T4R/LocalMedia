@@ -25,6 +25,10 @@ Parte da suíte **Local/Taylor** de aplicativos offline-first. Instale pelo
   como faixa** sem recodificar. Combina com o .srt que o LocalScribe gera.
 - **Faixas**: remover/escolher áudios e legendas de um MKV/MP4 sem recodificar.
 - **Ajustes**: redimensionar, rotacionar e **normalizar volume** (loudnorm EBU R128).
+- **Logo / marca d'água**: sobrepõe um PNG num canto do vídeo (tamanho, opacidade, posição).
+- **Esconder logo**: borra uma região com o filtro `delogo` — *esconde, não reconstrói* (remoção
+  de verdade é o [LocalPaint](https://github.com/Anon5T4R/LocalPaint)).
+- **Cortar silêncio** (áudio): tira o silêncio do começo e os vãos longos de uma gravação de voz.
 - **Lote**: o mesmo preset aplicado em N arquivos de uma vez.
 - **Fila com progresso real** (ffmpeg `-progress` estruturado), velocidade e cancelamento.
 - Arraste arquivos pra janela; tema claro/escuro; interface em português.

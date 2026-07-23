@@ -299,6 +299,145 @@ export function buildRotate(info: MediaInfo, rotation: Rotation): BuiltJob {
   };
 }
 
+// ---------- quick-ops (v0.11): logo, esconder região, cortar silêncio ----------
+//
+// A régua da suíte (decisão 2026-07-23): operação de UM arquivo, UM passo, SEM
+// timeline mora no Media (o "resolvo rápido"); arranjar clipes no tempo é o
+// LocalVideo. Estas três são exatamente isso — o que o Video faz do jeito
+// profissional (camada de imagem, filtro por clipe), aqui é um clique.
+
+/** Onde o logo/região se ancora no quadro. Quatro cantos + centro cobrem o que
+ *  a mão precisa; um seletor de caixa livre seria o editor, que é o Video. */
+export type Corner = "tl" | "tr" | "bl" | "br" | "center";
+
+/** Expressão de posição do `overlay` (usa main_w/overlay_w do ffmpeg) — o logo
+ *  já foi escalado, então a margem `m` é em pixels do quadro de saída. */
+function overlayPos(corner: Corner, m: number): string {
+  switch (corner) {
+    case "tl": return `${m}:${m}`;
+    case "tr": return `main_w-overlay_w-${m}:${m}`;
+    case "bl": return `${m}:main_h-overlay_h-${m}`;
+    case "br": return `main_w-overlay_w-${m}:main_h-overlay_h-${m}`;
+    case "center": return `(main_w-overlay_w)/2:(main_h-overlay_h)/2`;
+  }
+}
+
+function clampInt(n: number, lo: number, hi: number): number {
+  return Math.max(lo, Math.min(hi, Math.round(n)));
+}
+
+/**
+ * Marca d'água / logo: sobrepõe um PNG num canto. `sizePct` é a largura do logo
+ * como fração da largura do vídeo; `opacity` 0..1. Recodifica o vídeo (overlay
+ * mexe no pixel), copia o áudio. É o "carimba meu logo nisto" — no Video o mesmo
+ * é uma camada de imagem que entra e sai no tempo.
+ */
+export function buildWatermark(
+  info: MediaInfo,
+  logoPath: string,
+  corner: Corner,
+  sizePct: number,
+  opacity: number,
+): BuiltJob {
+  const W = info.video?.width ?? 1280;
+  const logoW = clampInt(W * sizePct, 2, W);
+  const m = Math.max(1, Math.round(W * 0.02));
+  const op = Math.min(1, Math.max(0, opacity));
+  // Logo escalado + opacidade extra (colorchannelmixer=aa) e depois o overlay.
+  const fc =
+    `[1:v]scale=${logoW}:-1,format=rgba,colorchannelmixer=aa=${op.toFixed(3)}[l];` +
+    `[0:v][l]overlay=${overlayPos(corner, m)}[v]`;
+  const container = info.container === "mkv" ? "mkv" : "mp4";
+  return {
+    label: tr("job.watermark"),
+    ext: container,
+    suffix: "logo",
+    denomMs: info.durationMs,
+    steps: [
+      [
+        "-i", info.path,
+        "-i", logoPath,
+        "-filter_complex", fc,
+        "-map", "[v]", "-map", "0:a?",
+        "-c:v", "libx264", "-crf", "20", "-preset", "veryfast",
+        "-pix_fmt", "yuv420p",
+        "-c:a", "copy",
+        ...(container === "mp4" ? ["-movflags", "+faststart"] : []),
+      ],
+    ],
+  };
+}
+
+/**
+ * Esconder um logo/marca: o filtro `delogo` BORRA uma região interpolando das
+ * bordas. **Esconde, não reconstrói** — remoção de verdade (inpainting) é o
+ * LocalPaint (MI-GAN/LaMa). O nome e a dica dizem isso, pra o botão não prometer
+ * o que não cumpre. Região por canto + tamanho (fração), como o logo.
+ */
+export function buildHideRegion(
+  info: MediaInfo,
+  corner: Corner,
+  wPct: number,
+  hPct: number,
+): BuiltJob {
+  const W = info.video?.width ?? 1280;
+  const H = info.video?.height ?? 720;
+  let bw = clampInt(W * wPct, 8, W - 4);
+  let bh = clampInt(H * hPct, 8, H - 4);
+  const m = Math.round(W * 0.02);
+  let x = 0, y = 0;
+  switch (corner) {
+    case "tl": x = m; y = m; break;
+    case "tr": x = W - bw - m; y = m; break;
+    case "bl": x = m; y = H - bh - m; break;
+    case "br": x = W - bw - m; y = H - bh - m; break;
+    case "center": x = (W - bw) / 2; y = (H - bh) / 2; break;
+  }
+  // delogo EXIGE 1px de borda dentro do quadro (interpola dela) — clampa x/y/w/h.
+  x = clampInt(x, 1, W - 3);
+  y = clampInt(y, 1, H - 3);
+  bw = clampInt(bw, 1, W - x - 1);
+  bh = clampInt(bh, 1, H - y - 1);
+  const container = info.container === "mkv" ? "mkv" : "mp4";
+  return {
+    label: tr("job.hideRegion"),
+    ext: container,
+    suffix: "sem-logo",
+    denomMs: info.durationMs,
+    steps: [
+      [
+        "-i", info.path,
+        "-vf", `delogo=x=${x}:y=${y}:w=${bw}:h=${bh}`,
+        "-c:v", "libx264", "-crf", "20", "-preset", "veryfast",
+        "-pix_fmt", "yuv420p",
+        "-c:a", "copy",
+        ...(container === "mp4" ? ["-movflags", "+faststart"] : []),
+      ],
+    ],
+  };
+}
+
+/**
+ * Cortar silêncio de um ÁUDIO: `silenceremove` tira o silêncio do começo e os
+ * vãos longos (> `stop_duration`). **Só áudio** de propósito — num vídeo, encurtar
+ * o áudio dessincronizaria a imagem (isso é trabalho de timeline, o Video). Pra
+ * limpar uma gravação de voz/podcast é o clique certo. `thresholdDb` negativo
+ * (ex.: −50) = o que conta como silêncio.
+ */
+export function buildCutSilence(info: MediaInfo, thresholdDb: number): BuiltJob {
+  const th = clampInt(thresholdDb, -80, -10);
+  const af =
+    `silenceremove=start_periods=1:start_duration=0:start_threshold=${th}dB:` +
+    `stop_periods=-1:stop_duration=0.3:stop_threshold=${th}dB`;
+  return {
+    label: tr("job.cutSilence"),
+    ext: "mp3",
+    suffix: "sem-silencio",
+    denomMs: info.durationMs,
+    steps: [["-i", info.path, "-vn", "-af", af, "-c:a", "libmp3lame", "-q:a", "2"]],
+  };
+}
+
 export function buildLoudnorm(info: MediaInfo): BuiltJob {
   const hasVideo = info.video !== null;
   const args = hasVideo
